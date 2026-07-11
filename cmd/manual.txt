@@ -1,0 +1,84 @@
+namo reference
+==============
+
+namo generates memorable, sortable names of the form:
+
+    [prefix-]stamp-slug
+
+    debug-output-260711154501-star-studded-booze-cruise
+    |            |            |
+    prefix       stamp        slug
+
+- prefix: optional descriptive label you pass with -p.
+- stamp:  timestamp, yymmddhhmmss by default, so names sort
+          chronologically and stay unique through time. Local time.
+- slug:   memorable random words from hotdiva2000, for human
+          identification.
+
+Names print to stdout, one per line. Everything else (errors, help)
+goes to stderr, so command substitution is always safe:
+
+    filename=".sandbox/$(namo -p debug-output).log"
+
+Flags
+-----
+
+-p, --prefix TEXT    Descriptive prefix joined with a hyphen.
+-n, --count N        Generate N names (default 1). The whole batch
+                     shares one timestamp; slugs are unique within
+                     the batch.
+-s, --size SIZE      Slug length: short, standard (default), or long.
+                       short     modifier-noun only, e.g. booze-cruise
+                       standard  occasional extra words
+                       long      always adds extra prefix and suffix
+                                 words
+    --stamp LAYOUT   Custom strftime-style timestamp layout.
+                     Default: %y%m%d%H%M%S
+    --short-stamp    HHMM timestamp (same as --stamp %H%M), for
+                     ephemeral names you only need to tell apart
+                     within a day.
+    --no-stamp       Omit the timestamp entirely: just the slug.
+
+--stamp, --short-stamp, and --no-stamp are mutually exclusive.
+
+Stamp layout verbs
+------------------
+
+    %Y  four-digit year   2026        %H  hour (00-23)
+    %y  two-digit year    26          %M  minute
+    %m  month             07          %S  second
+    %d  day               11          %%  literal percent sign
+
+Any other verb is an error. Literal characters pass through
+unchanged, so layouts like %Y-%m-%d work as expected.
+
+Recipes
+-------
+
+Sortable log or scratch file:
+
+    log=".sandbox/$(namo -p fish-profile).log"
+
+Family of output files sharing one run prefix:
+
+    prefix="$(namo)"
+    response="out/${prefix}-response.md"
+    meta="out/${prefix}-meta.json"
+
+Branch or session handle (no timestamp):
+
+    git switch -c "spike/$(namo --no-stamp -s short)"
+
+Ephemeral name, only needs to be unique today:
+
+    namo --short-stamp
+
+Batch of seed identifiers:
+
+    namo -n 25 --no-stamp
+
+Exit codes
+----------
+
+    0  success
+    1  any error (bad flag, invalid layout, generation failure)
