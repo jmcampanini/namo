@@ -1,6 +1,6 @@
 # namo
 
-`namo` generates memorable, sortable names: `[prefix-]stamp-slug`, like `debug-output-260711154501-star-studded-booze-cruise`.
+`namo` generates memorable, sortable names: `[prefix-][stamp-]slug`, like `debug-output-260711154501-star-studded-booze-cruise`.
 
 ## Install
 
@@ -64,7 +64,7 @@ filename=".sandbox/$(namo -p debug-output).log"
 | `-s, --size SIZE` | slug length: `short`, `standard` (default), `long` |
 | `--stamp LAYOUT` | custom strftime layout (default `%y%m%d%H%M%S`) |
 | `--short-stamp` | HHMM timestamp for ephemeral names |
-| `--no-stamp` | slug only, no timestamp |
+| `--no-stamp` | omit the timestamp while retaining any prefix |
 
 `--prefix` accepts ASCII letters and digits as content, lowercases letters, replaces each run of other characters with one dash, and removes edge dashes. It errors if no ASCII letters or digits remain.
 

@@ -29,7 +29,7 @@ func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:   "namo",
 		Short: "Generate memorable, sortable names.",
-		Long: "namo composes [prefix-]stamp-slug names: a sortable timestamp plus a\n" +
+		Long: "namo composes [prefix-][stamp-]slug names: an optional sortable timestamp plus a\n" +
 			"memorable random slug.\n\n" +
 			"  namo -p debug-output  ->  debug-output-260711154501-star-studded-booze-cruise",
 		Version:       Version,
@@ -43,12 +43,12 @@ func newRootCmd() *cobra.Command {
 
 	f := root.Flags()
 	f.StringVarP(&flags.prefix, "prefix", "p", "", "ASCII-normalized prefix joined by a hyphen; mutually exclusive with --raw-prefix")
-	f.StringVar(&flags.rawPrefix, "raw-prefix", "", "unsafe trusted prefix preserved before a joining hyphen; mutually exclusive with --prefix")
+	f.StringVar(&flags.rawPrefix, "raw-prefix", "", "unsafe trusted prefix: non-empty input is preserved before a joining hyphen; empty omits the prefix; mutually exclusive with --prefix")
 	f.IntVarP(&flags.count, "count", "n", 1, "number of names to generate (one timestamp, unique slugs)")
 	f.StringVarP(&flags.size, "size", "s", string(namegen.SizeStandard), "slug size: short, standard, or long")
 	f.StringVar(&flags.stamp, "stamp", namegen.DefaultStampLayout, "strftime-style timestamp layout (%Y %y %m %d %H %M %S)")
 	f.BoolVar(&flags.shortStamp, "short-stamp", false, "use an HHMM timestamp for ephemeral names (--stamp %H%M)")
-	f.BoolVar(&flags.noStamp, "no-stamp", false, "omit the timestamp")
+	f.BoolVar(&flags.noStamp, "no-stamp", false, "omit the timestamp while retaining any prefix")
 	root.MarkFlagsMutuallyExclusive("stamp", "short-stamp", "no-stamp")
 	root.MarkFlagsMutuallyExclusive("prefix", "raw-prefix")
 

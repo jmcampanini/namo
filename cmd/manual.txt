@@ -3,7 +3,7 @@ namo reference
 
 namo generates memorable, sortable names of the form:
 
-    [prefix-]stamp-slug
+    [prefix-][stamp-]slug
 
     debug-output-260711154501-star-studded-booze-cruise
     |            |            |
@@ -43,7 +43,7 @@ Flags
     --short-stamp    HHMM timestamp (same as --stamp %H%M), for
                      ephemeral names you only need to tell apart
                      within a day.
-    --no-stamp       Omit the timestamp entirely: just the slug.
+    --no-stamp       Omit the timestamp while retaining any prefix.
 
 --prefix accepts ASCII letters and digits as content, lowercases
 letters, replaces each run of other characters with one dash, and

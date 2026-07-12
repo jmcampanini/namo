@@ -1,4 +1,4 @@
-// Package namegen composes [prefix-]stamp-slug names.
+// Package namegen composes [prefix-][stamp-]slug names.
 package namegen
 
 import (
@@ -94,8 +94,8 @@ type Options struct {
 	Stamp string
 }
 
-// Generate returns Count names of the form [prefix-]stamp-slug, all sharing
-// a single timestamp, with each slug unique within the batch.
+// Generate returns Count names of the form [prefix-][stamp-]slug, all sharing
+// the same optional timestamp, with each slug unique within the batch.
 func Generate(opts Options) ([]string, error) {
 	if opts.Count < 1 {
 		return nil, fmt.Errorf("count must be at least 1, got %d", opts.Count)
