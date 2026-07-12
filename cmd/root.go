@@ -13,6 +13,7 @@ type rootFlags struct {
 	count      int
 	noStamp    bool
 	prefix     string
+	rawPrefix  string
 	shortStamp bool
 	size       string
 	stamp      string
@@ -41,13 +42,15 @@ func newRootCmd() *cobra.Command {
 	}
 
 	f := root.Flags()
-	f.StringVarP(&flags.prefix, "prefix", "p", "", "descriptive prefix joined with a hyphen")
+	f.StringVarP(&flags.prefix, "prefix", "p", "", "normalized descriptive prefix joined with a hyphen")
+	f.StringVar(&flags.rawPrefix, "raw-prefix", "", "verbatim descriptive prefix joined with a hyphen")
 	f.IntVarP(&flags.count, "count", "n", 1, "number of names to generate (one timestamp, unique slugs)")
 	f.StringVarP(&flags.size, "size", "s", string(namegen.SizeStandard), "slug size: short, standard, or long")
 	f.StringVar(&flags.stamp, "stamp", namegen.DefaultStampLayout, "strftime-style timestamp layout (%Y %y %m %d %H %M %S)")
 	f.BoolVar(&flags.shortStamp, "short-stamp", false, "use an HHMM timestamp for ephemeral names (--stamp %H%M)")
 	f.BoolVar(&flags.noStamp, "no-stamp", false, "omit the timestamp")
 	root.MarkFlagsMutuallyExclusive("stamp", "short-stamp", "no-stamp")
+	root.MarkFlagsMutuallyExclusive("prefix", "raw-prefix")
 
 	root.AddCommand(newDocsCmd())
 
@@ -55,6 +58,15 @@ func newRootCmd() *cobra.Command {
 }
 
 func runRoot(cmd *cobra.Command, flags *rootFlags) error {
+	prefix := flags.rawPrefix
+	if cmd.Flags().Changed("prefix") {
+		var err error
+		prefix, err = namegen.NormalizePrefix(flags.prefix)
+		if err != nil {
+			return err
+		}
+	}
+
 	layout := flags.stamp
 	switch {
 	case flags.noStamp:
@@ -70,7 +82,7 @@ func runRoot(cmd *cobra.Command, flags *rootFlags) error {
 
 	names, err := namegen.Generate(namegen.Options{
 		Count:  flags.count,
-		Prefix: flags.prefix,
+		Prefix: prefix,
 		Size:   size,
 		Stamp:  layout,
 	})

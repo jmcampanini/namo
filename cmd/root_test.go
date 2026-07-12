@@ -70,6 +70,94 @@ func TestRootCommand(t *testing.T) {
 	}
 }
 
+func TestRootCommandStrictPrefix(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{name: "uppercase", args: []string{"--prefix", "BuildOutput"}, want: "buildoutput"},
+		{name: "spaces", args: []string{"--prefix", "build output"}, want: "build-output"},
+		{name: "punctuation", args: []string{"--prefix", "build_output.v2"}, want: "build-output-v2"},
+		{name: "repeated dashes", args: []string{"--prefix", "build---output"}, want: "build-output"},
+		{name: "edge dashes", args: []string{"--prefix=-build-output-"}, want: "build-output"},
+		{name: "repeated flag uses last value", args: []string{"-p", "first", "--prefix", "FINAL value"}, want: "final-value"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.args = append(tt.args, "--no-stamp")
+			stdout, stderr, err := runCommand(t, tt.args...)
+			if err != nil {
+				t.Fatalf("Execute(%v) error = %v", tt.args, err)
+			}
+			if stderr != "" {
+				t.Fatalf("Execute(%v) stderr = %q, want empty", tt.args, stderr)
+			}
+			assertPrefixedName(t, stdout, tt.want)
+		})
+	}
+}
+
+func TestRootCommandStrictPrefixRejectsEmptyNormalizedInput(t *testing.T) {
+	for _, prefix := range []string{"", "--- ! ☃ ---"} {
+		stdout, _, err := runCommand(t, "--prefix", prefix, "--no-stamp")
+		if err == nil || !strings.Contains(err.Error(), "prefix must contain at least one alphanumeric character") {
+			t.Fatalf("Execute(--prefix %q) error = %v, want alphanumeric validation error", prefix, err)
+		}
+		if stdout != "" {
+			t.Fatalf("Execute(--prefix %q) stdout = %q, want empty", prefix, stdout)
+		}
+	}
+}
+
+func TestRootCommandRawPrefix(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{name: "preserved verbatim", args: []string{"--raw-prefix=--Raw Prefix!?--"}, want: "--Raw Prefix!?--"},
+		{name: "repeated flag uses last value", args: []string{"--raw-prefix", "first", "--raw-prefix", "LAST value!?"}, want: "LAST value!?"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.args = append(tt.args, "--no-stamp")
+			stdout, stderr, err := runCommand(t, tt.args...)
+			if err != nil {
+				t.Fatalf("Execute(%v) error = %v", tt.args, err)
+			}
+			if stderr != "" {
+				t.Fatalf("Execute(%v) stderr = %q, want empty", tt.args, stderr)
+			}
+			assertPrefixedName(t, stdout, tt.want)
+		})
+	}
+}
+
+func TestRootCommandPrefixModesAreMutuallyExclusive(t *testing.T) {
+	stdout, _, err := runCommand(t, "--prefix", "strict", "--raw-prefix", "raw")
+	if err == nil || !strings.Contains(err.Error(), "none of the others can be") {
+		t.Fatalf("Execute() error = %v, want mutually exclusive flag error", err)
+	}
+	if stdout != "" {
+		t.Fatalf("Execute() stdout = %q, want empty", stdout)
+	}
+}
+
+func assertPrefixedName(t *testing.T, stdout, prefix string) {
+	t.Helper()
+	wantPrefix := prefix + "-"
+	if !strings.HasPrefix(stdout, wantPrefix) {
+		t.Fatalf("output = %q, want prefix %q", stdout, wantPrefix)
+	}
+	slug := strings.TrimPrefix(stdout, wantPrefix)
+	if !regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)+\n$`).MatchString(slug) {
+		t.Fatalf("output slug %q is not a names-only slug", slug)
+	}
+}
+
 func TestRootCommandBatchSharesStamp(t *testing.T) {
 	stdout, _, err := runCommand(t, "-n", "5")
 	if err != nil {
