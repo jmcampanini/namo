@@ -9,15 +9,17 @@ namo generates memorable, sortable names of the form:
     |            |            |
     prefix       stamp        slug
 
-- prefix: optional descriptive label you pass with -p or --raw-prefix.
-- stamp:  timestamp, yymmddhhmmss by default, so names sort
-          chronologically and stay unique through time. Local time.
+- prefix: optional descriptive label passed with -p/--prefix or
+          --raw-prefix.
+- stamp:  timestamp, yymmddhhmmss by default, providing a local-time
+          sort key.
 - slug:   memorable random words from hotdiva2000, for human
           identification.
 
-Normal output, including strict-prefix output, prints one name per line
-to stdout. Everything else (errors, help) goes to stderr, making uses
-such as this safe:
+Generated names and other successful command output, including help,
+go to stdout; errors go to stderr. Without --raw-prefix or a custom
+--stamp, generated output contains one name per line, making uses such
+as this safe:
 
     filename=".sandbox/$(namo -p debug-output).log"
 

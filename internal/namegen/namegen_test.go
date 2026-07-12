@@ -40,11 +40,13 @@ func TestNormalizePrefix(t *testing.T) {
 		{name: "unicode separates ASCII", input: "café東京Build", want: "caf-build"},
 		{name: "accented uppercase is not converted", input: "Éclair", want: "clair"},
 		{name: "slashes and underscores replaced", input: "team_name/feature", want: "team-name-feature"},
+		{name: "malformed UTF-8 separates ASCII", input: string([]byte{'A', 0xff, 'B', 0xc0, 'C'}), want: "a-b-c"},
 		{name: "empty", input: "", wantErr: true},
 		{name: "hyphens only", input: "---", wantErr: true},
 		{name: "whitespace only", input: " \t\n", wantErr: true},
 		{name: "punctuation only", input: "!@#$%^&*()", wantErr: true},
 		{name: "unicode only", input: "東京é💥", wantErr: true},
+		{name: "malformed UTF-8 only", input: string([]byte{0xff, 0xfe}), wantErr: true},
 	}
 
 	for _, tt := range tests {
@@ -67,21 +69,6 @@ func TestNormalizePrefix(t *testing.T) {
 				t.Fatalf("NormalizePrefix(%q) = %q, %v; want canonical input unchanged", got, canonical, err)
 			}
 		})
-	}
-}
-
-func TestNormalizePrefixMalformedUTF8(t *testing.T) {
-	got, err := NormalizePrefix(string([]byte{'A', 0xff, 'B', 0xc0, 'C'}))
-	if err != nil {
-		t.Fatalf("NormalizePrefix() error = %v", err)
-	}
-	if got != "a-b-c" {
-		t.Fatalf("NormalizePrefix() = %q, want %q", got, "a-b-c")
-	}
-
-	_, err = NormalizePrefix(string([]byte{0xff, 0xfe}))
-	if err == nil || err.Error() != "prefix must contain at least one ASCII letter or digit" {
-		t.Fatalf("NormalizePrefix() error = %v, want ASCII validation error", err)
 	}
 }
 

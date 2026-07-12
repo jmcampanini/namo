@@ -42,8 +42,8 @@ func newRootCmd() *cobra.Command {
 	}
 
 	f := root.Flags()
-	f.StringVarP(&flags.prefix, "prefix", "p", "", "ASCII-normalized prefix; mutually exclusive with --raw-prefix")
-	f.StringVar(&flags.rawPrefix, "raw-prefix", "", "exact trusted/unsafe prefix input; mutually exclusive with --prefix")
+	f.StringVarP(&flags.prefix, "prefix", "p", "", "ASCII-normalized prefix joined by a hyphen; mutually exclusive with --raw-prefix")
+	f.StringVar(&flags.rawPrefix, "raw-prefix", "", "unsafe trusted prefix preserved before a joining hyphen; mutually exclusive with --prefix")
 	f.IntVarP(&flags.count, "count", "n", 1, "number of names to generate (one timestamp, unique slugs)")
 	f.StringVarP(&flags.size, "size", "s", string(namegen.SizeStandard), "slug size: short, standard, or long")
 	f.StringVar(&flags.stamp, "stamp", namegen.DefaultStampLayout, "strftime-style timestamp layout (%Y %y %m %d %H %M %S)")

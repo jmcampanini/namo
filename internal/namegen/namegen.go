@@ -140,16 +140,21 @@ func Generate(opts Options) ([]string, error) {
 		}
 	}
 
+	parts := make([]string, 0, 2)
+	if opts.Prefix != "" {
+		parts = append(parts, opts.Prefix)
+	}
+	if stamp != "" {
+		parts = append(parts, stamp)
+	}
+	namePrefix := strings.Join(parts, "-")
+	if namePrefix != "" {
+		namePrefix += "-"
+	}
+
 	names := make([]string, opts.Count)
 	for i, slug := range unique {
-		parts := make([]string, 0, 3)
-		if opts.Prefix != "" {
-			parts = append(parts, opts.Prefix)
-		}
-		if stamp != "" {
-			parts = append(parts, stamp)
-		}
-		names[i] = strings.Join(append(parts, slug), "-")
+		names[i] = namePrefix + slug
 	}
 	return names, nil
 }

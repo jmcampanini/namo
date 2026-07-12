@@ -48,7 +48,7 @@ $ namo -n 3 -s short
 260711154501-business-school
 ```
 
-The timestamp (`yymmddhhmmss`, local time) keeps names lexically sortable through time; the slug ([hotdiva2000](https://github.com/charmbracelet/hotdiva2000)) keeps them memorable. Normal output, including strict-prefix output, is one name per line and is safe for uses such as:
+The timestamp (`yymmddhhmmss`, local time) provides a lexically sortable label; the slug ([hotdiva2000](https://github.com/charmbracelet/hotdiva2000)) keeps names memorable. Without `--raw-prefix` or a custom `--stamp`, generated output contains one name per line and is safe for uses such as:
 
 ```sh
 filename=".sandbox/$(namo -p debug-output).log"
@@ -72,4 +72,4 @@ filename=".sandbox/$(namo -p debug-output).log"
 
 `--stamp`, `--short-stamp`, and `--no-stamp` are mutually exclusive.
 
-Run `namo docs` for the full reference, including stamp layout verbs and recipes.
+Run `namo docs` for stamp layout verbs, size details, and recipes.
