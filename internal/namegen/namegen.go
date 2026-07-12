@@ -29,6 +29,34 @@ const (
 	SizeLong Size = "long"
 )
 
+// NormalizePrefix converts a prefix to lowercase ASCII words separated by dashes.
+func NormalizePrefix(s string) (string, error) {
+	var normalized strings.Builder
+	normalized.Grow(len(s))
+	separator := false
+
+	for i := 0; i < len(s); i++ {
+		char := s[i]
+		if char >= 'A' && char <= 'Z' {
+			char += 'a' - 'A'
+		}
+		if (char >= 'a' && char <= 'z') || (char >= '0' && char <= '9') {
+			if separator && normalized.Len() > 0 {
+				normalized.WriteByte('-')
+			}
+			normalized.WriteByte(char)
+			separator = false
+			continue
+		}
+		separator = true
+	}
+
+	if normalized.Len() == 0 {
+		return "", fmt.Errorf("prefix must contain at least one alphanumeric character")
+	}
+	return normalized.String(), nil
+}
+
 // ParseSize validates a user-supplied size name.
 func ParseSize(s string) (Size, error) {
 	switch Size(s) {
