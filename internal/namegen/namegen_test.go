@@ -51,8 +51,8 @@ func TestNormalizePrefix(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got, err := NormalizePrefix(tt.input)
 			if tt.wantErr {
-				if err == nil || !strings.Contains(err.Error(), "prefix must contain at least one alphanumeric character") {
-					t.Fatalf("NormalizePrefix(%q) error = %v, want alphanumeric validation error", tt.input, err)
+				if err == nil || !strings.Contains(err.Error(), "prefix must contain at least one ASCII letter or digit") {
+					t.Fatalf("NormalizePrefix(%q) error = %v, want ASCII validation error", tt.input, err)
 				}
 				return
 			}
@@ -67,6 +67,21 @@ func TestNormalizePrefix(t *testing.T) {
 				t.Fatalf("NormalizePrefix(%q) = %q, %v; want canonical input unchanged", got, canonical, err)
 			}
 		})
+	}
+}
+
+func TestNormalizePrefixMalformedUTF8(t *testing.T) {
+	got, err := NormalizePrefix(string([]byte{'A', 0xff, 'B', 0xc0, 'C'}))
+	if err != nil {
+		t.Fatalf("NormalizePrefix() error = %v", err)
+	}
+	if got != "a-b-c" {
+		t.Fatalf("NormalizePrefix() = %q, want %q", got, "a-b-c")
+	}
+
+	_, err = NormalizePrefix(string([]byte{0xff, 0xfe}))
+	if err == nil || err.Error() != "prefix must contain at least one ASCII letter or digit" {
+		t.Fatalf("NormalizePrefix() error = %v, want ASCII validation error", err)
 	}
 }
 

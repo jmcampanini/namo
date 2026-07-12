@@ -102,8 +102,8 @@ func TestRootCommandStrictPrefix(t *testing.T) {
 func TestRootCommandStrictPrefixRejectsEmptyNormalizedInput(t *testing.T) {
 	for _, prefix := range []string{"", "--- ! ☃ ---"} {
 		stdout, _, err := runCommand(t, "--prefix", prefix, "--no-stamp")
-		if err == nil || !strings.Contains(err.Error(), "prefix must contain at least one alphanumeric character") {
-			t.Fatalf("Execute(--prefix %q) error = %v, want alphanumeric validation error", prefix, err)
+		if err == nil || !strings.Contains(err.Error(), "prefix must contain at least one ASCII letter or digit") {
+			t.Fatalf("Execute(--prefix %q) error = %v, want ASCII validation error", prefix, err)
 		}
 		if stdout != "" {
 			t.Fatalf("Execute(--prefix %q) stdout = %q, want empty", prefix, stdout)
@@ -118,6 +118,9 @@ func TestRootCommandRawPrefix(t *testing.T) {
 		want string
 	}{
 		{name: "preserved verbatim", args: []string{"--raw-prefix=--Raw Prefix!?--"}, want: "--Raw Prefix!?--"},
+		{name: "unicode preserved", args: []string{"--raw-prefix", "東京💥é"}, want: "東京💥é"},
+		{name: "trailing hyphen keeps joining hyphen", args: []string{"--raw-prefix", "trusted-"}, want: "trusted-"},
+		{name: "embedded newline preserved", args: []string{"--raw-prefix", "first\nsecond"}, want: "first\nsecond"},
 		{name: "repeated flag uses last value", args: []string{"--raw-prefix", "first", "--raw-prefix", "LAST value!?"}, want: "LAST value!?"},
 	}
 
@@ -136,13 +139,31 @@ func TestRootCommandRawPrefix(t *testing.T) {
 	}
 }
 
-func TestRootCommandPrefixModesAreMutuallyExclusive(t *testing.T) {
-	stdout, _, err := runCommand(t, "--prefix", "strict", "--raw-prefix", "raw")
-	if err == nil || !strings.Contains(err.Error(), "none of the others can be") {
-		t.Fatalf("Execute() error = %v, want mutually exclusive flag error", err)
+func TestRootCommandEmptyRawPrefixBehavesAsNoPrefix(t *testing.T) {
+	stdout, stderr, err := runCommand(t, "--raw-prefix=", "--no-stamp")
+	if err != nil {
+		t.Fatalf("Execute() error = %v", err)
 	}
-	if stdout != "" {
-		t.Fatalf("Execute() stdout = %q, want empty", stdout)
+	if stderr != "" {
+		t.Fatalf("Execute() stderr = %q, want empty", stderr)
+	}
+	if !regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)+\n$`).MatchString(stdout) {
+		t.Fatalf("output = %q, want an unprefixed slug", stdout)
+	}
+}
+
+func TestRootCommandPrefixModesAreMutuallyExclusive(t *testing.T) {
+	for _, args := range [][]string{
+		{"--prefix", "strict", "--raw-prefix", "raw"},
+		{"--prefix=", "--raw-prefix="},
+	} {
+		stdout, _, err := runCommand(t, args...)
+		if err == nil || !strings.Contains(err.Error(), "none of the others can be") {
+			t.Fatalf("Execute(%v) error = %v, want mutually exclusive flag error", args, err)
+		}
+		if stdout != "" {
+			t.Fatalf("Execute(%v) stdout = %q, want empty", args, stdout)
+		}
 	}
 }
 
@@ -181,13 +202,43 @@ func TestRootCommandBatchSharesStamp(t *testing.T) {
 	}
 }
 
-func TestDocsCommand(t *testing.T) {
-	stdout, _, err := runCommand(t, "docs")
-	if err != nil {
-		t.Fatalf("Execute(docs) error = %v", err)
+func TestPrefixSafetyText(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want []string
+	}{
+		{
+			name: "help",
+			args: []string{"--help"},
+			want: []string{
+				"ASCII-normalized prefix; mutually exclusive with --raw-prefix",
+				"exact trusted/unsafe prefix input; mutually exclusive with --prefix",
+			},
+		},
+		{
+			name: "docs",
+			args: []string{"docs"},
+			want: []string{
+				"--prefix accepts ASCII letters and digits",
+				"Use --raw-prefix to pass the prefix text through exactly",
+				"--raw-prefix are mutually exclusive",
+			},
+		},
 	}
-	if !strings.Contains(stdout, "namo") {
-		t.Fatalf("docs output does not mention namo:\n%s", stdout)
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			stdout, _, err := runCommand(t, tt.args...)
+			if err != nil {
+				t.Fatalf("Execute(%v) error = %v", tt.args, err)
+			}
+			for _, want := range tt.want {
+				if !strings.Contains(stdout, want) {
+					t.Fatalf("Execute(%v) output does not contain %q:\n%s", tt.args, want, stdout)
+				}
+			}
+		})
 	}
 }
 

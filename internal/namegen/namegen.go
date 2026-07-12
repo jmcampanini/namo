@@ -52,7 +52,7 @@ func NormalizePrefix(s string) (string, error) {
 	}
 
 	if normalized.Len() == 0 {
-		return "", fmt.Errorf("prefix must contain at least one alphanumeric character")
+		return "", fmt.Errorf("prefix must contain at least one ASCII letter or digit")
 	}
 	return normalized.String(), nil
 }
