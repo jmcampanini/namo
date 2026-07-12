@@ -60,7 +60,7 @@ filename=".sandbox/$(namo -p debug-output).log"
 | --- | --- |
 | `-p, --prefix TEXT` | strictly normalized descriptive prefix joined with a hyphen |
 | `--raw-prefix TEXT` | trusted-input-only unsafe prefix passthrough |
-| `-n, --count N` | generate N names sharing one timestamp, unique slugs |
+| `-n, --count N` | generate N names, where `1 <= count <= 100`, sharing one timestamp and unique slugs |
 | `-s, --size SIZE` | slug length: `short`, `standard` (default), `long` |
 | `--stamp LAYOUT` | custom strftime layout (default `%y%m%d%H%M%S`) |
 | `--short-stamp` | HHMM timestamp for ephemeral names |
@@ -70,6 +70,8 @@ filename=".sandbox/$(namo -p debug-output).log"
 
 `--raw-prefix` is a trusted-input-only unsafe escape hatch. For a non-empty raw prefix, `namo` preserves the supplied bytes and then adds one joining hyphen; a trailing dash can therefore produce doubled dashes. An empty raw prefix behaves as no prefix. Raw line breaks, control bytes, and path separators are preserved, so they can bypass the normal one-name-per-line, command-substitution, terminal, and path safety guarantees. `--prefix` and `--raw-prefix` are mutually exclusive.
 
-`--stamp`, `--short-stamp`, and `--no-stamp` are mutually exclusive.
+`--count` accepts only `1 <= count <= 100`.
+
+A custom `--stamp` is also trusted input. Literal line breaks, control bytes, and path separators in its layout are preserved and can bypass the same output-safety guarantees. `--stamp`, `--short-stamp`, and `--no-stamp` are mutually exclusive.
 
 Run `namo docs` for stamp layout verbs, size details, and recipes.

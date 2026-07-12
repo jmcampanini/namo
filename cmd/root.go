@@ -44,9 +44,9 @@ func newRootCmd() *cobra.Command {
 	f := root.Flags()
 	f.StringVarP(&flags.prefix, "prefix", "p", "", "ASCII-normalized prefix joined by a hyphen; mutually exclusive with --raw-prefix")
 	f.StringVar(&flags.rawPrefix, "raw-prefix", "", "unsafe trusted prefix: non-empty input is preserved before a joining hyphen; empty omits the prefix; mutually exclusive with --prefix")
-	f.IntVarP(&flags.count, "count", "n", 1, "number of names to generate (one timestamp, unique slugs)")
+	f.IntVarP(&flags.count, "count", "n", 1, "number of names to generate (1 <= count <= 100; one timestamp, unique slugs)")
 	f.StringVarP(&flags.size, "size", "s", string(namegen.SizeStandard), "slug size: short, standard, or long")
-	f.StringVar(&flags.stamp, "stamp", namegen.DefaultStampLayout, "strftime-style timestamp layout (%Y %y %m %d %H %M %S)")
+	f.StringVar(&flags.stamp, "stamp", namegen.DefaultStampLayout, "trusted custom strftime layout; preserved literals can make output unsafe (%Y %y %m %d %H %M %S)")
 	f.BoolVar(&flags.shortStamp, "short-stamp", false, "use an HHMM timestamp for ephemeral names (--stamp %H%M)")
 	f.BoolVar(&flags.noStamp, "no-stamp", false, "omit the timestamp while retaining any prefix")
 	root.MarkFlagsMutuallyExclusive("stamp", "short-stamp", "no-stamp")
@@ -58,6 +58,10 @@ func newRootCmd() *cobra.Command {
 }
 
 func runRoot(cmd *cobra.Command, flags *rootFlags) error {
+	if err := namegen.ValidateCount(flags.count); err != nil {
+		return err
+	}
+
 	prefix := flags.rawPrefix
 	if cmd.Flags().Changed("prefix") {
 		var err error

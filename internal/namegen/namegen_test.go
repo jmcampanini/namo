@@ -1,6 +1,7 @@
 package namegen
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 	"testing"
@@ -126,10 +127,47 @@ func TestGenerateCompose(t *testing.T) {
 }
 
 func TestGenerateCountValidation(t *testing.T) {
-	for _, count := range []int{0, -1} {
-		_, err := Generate(Options{Count: count})
-		if err == nil || !strings.Contains(err.Error(), "count must be at least 1") {
-			t.Fatalf("Generate(Count: %d) error = %v, want count validation error", count, err)
+	for _, count := range []int{0, -1, MaxCount + 1, int(^uint(0) >> 1)} {
+		t.Run(fmt.Sprintf("count_%d", count), func(t *testing.T) {
+			providerCalls := 0
+			clockCalls := 0
+			names, err := Generate(Options{
+				Count: count,
+				Now: func() time.Time {
+					clockCalls++
+					return fixedNow()
+				},
+				Slugs: func(int, float64, float64) []string {
+					providerCalls++
+					return []string{"valid-slug"}
+				},
+				Stamp: DefaultStampLayout,
+			})
+			if err == nil || !strings.Contains(err.Error(), "count must be between 1 and 100") {
+				t.Fatalf("Generate(Count: %d) error = %v, want range validation error", count, err)
+			}
+			if names != nil {
+				t.Fatalf("Generate(Count: %d) names = %v, want nil", count, names)
+			}
+			if providerCalls != 0 || clockCalls != 0 {
+				t.Fatalf("Generate(Count: %d) called provider %d times and clock %d times, want neither called", count, providerCalls, clockCalls)
+			}
+		})
+	}
+}
+
+func TestGenerateCountBoundaries(t *testing.T) {
+	for _, count := range []int{MinCount, MaxCount} {
+		values := make([]string, count)
+		for i := range values {
+			values[i] = fmt.Sprintf("slug-%d", i)
+		}
+		got, err := Generate(Options{Count: count, Slugs: stubSlugs(values...)})
+		if err != nil {
+			t.Fatalf("Generate(Count: %d) error = %v", count, err)
+		}
+		if len(got) != count {
+			t.Fatalf("Generate(Count: %d) returned %d names, want %d", count, len(got), count)
 		}
 	}
 }
@@ -188,17 +226,29 @@ func TestGenerateUniquenessBound(t *testing.T) {
 
 func TestGenerateFiltersMalformedSlugs(t *testing.T) {
 	got, err := Generate(Options{
-		Count: 2,
-		Slugs: stubSlugs("-bad", "bad-", "a--b", "", "good-slug", "another-fine"),
+		Count: 3,
+		Slugs: stubSlugs(
+			"", "Alpha", "alpha_beta", "alpha/beta", "alpha beta", "alpha\nbeta",
+			"éclair", "-alpha", "alpha-", "alpha--beta", "alpha.beta", "alpha\x00beta",
+			"alpha", "alpha-2", "alpha-beta",
+		),
 	})
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
-	want := []string{"good-slug", "another-fine"}
+	want := []string{"alpha", "alpha-2", "alpha-beta"}
 	for i := range want {
 		if got[i] != want[i] {
 			t.Fatalf("Generate() = %v, want %v", got, want)
 		}
+	}
+}
+
+func TestGenerateMalformedSlugExhaustion(t *testing.T) {
+	alwaysInvalid := func(int, float64, float64) []string { return []string{"invalid slug"} }
+	_, err := Generate(Options{Count: 1, Slugs: alwaysInvalid})
+	if err == nil || !strings.Contains(err.Error(), "generated only 0 of 1 unique slugs") {
+		t.Fatalf("Generate() error = %v, want bounded exhaustion error", err)
 	}
 }
 
@@ -258,8 +308,8 @@ func TestParseSize(t *testing.T) {
 }
 
 func TestGenerateRealSlugs(t *testing.T) {
-	shape := regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)+$`)
-	got, err := Generate(Options{Count: 200, Size: SizeShort})
+	shape := regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*$`)
+	got, err := Generate(Options{Count: MaxCount, Size: SizeShort})
 	if err != nil {
 		t.Fatalf("Generate() error = %v", err)
 	}
