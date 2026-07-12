@@ -30,8 +30,11 @@ make build
 $ namo
 260711154501-star-studded-booze-cruise
 
-$ namo -p debug-output
-debug-output-260711154501-star-studded-booze-cruise
+$ namo -p "Debug Output / API"
+debug-output-api-260711154501-star-studded-booze-cruise
+
+$ namo --raw-prefix "Build_42"
+Build_42-260711154501-star-studded-booze-cruise
 
 $ namo --no-stamp
 ivy-league-daddy
@@ -55,12 +58,15 @@ filename=".sandbox/$(namo -p debug-output).log"
 
 | Flag | Meaning |
 | --- | --- |
-| `-p, --prefix TEXT` | descriptive prefix joined with a hyphen |
+| `-p, --prefix TEXT` | strictly normalized descriptive prefix joined with a hyphen |
+| `--raw-prefix TEXT` | exact passthrough prefix joined with a hyphen |
 | `-n, --count N` | generate N names sharing one timestamp, unique slugs |
 | `-s, --size SIZE` | slug length: `short`, `standard` (default), `long` |
 | `--stamp LAYOUT` | custom strftime layout (default `%y%m%d%H%M%S`) |
 | `--short-stamp` | HHMM timestamp for ephemeral names |
 | `--no-stamp` | slug only, no timestamp |
+
+`--prefix` accepts ASCII letters and digits as content, lowercases letters, replaces each run of other characters with one dash, and removes edge dashes. It errors if no ASCII letters or digits remain. Use `--raw-prefix` to pass the prefix text through exactly. `--prefix` and `--raw-prefix` are mutually exclusive.
 
 `--stamp`, `--short-stamp`, and `--no-stamp` are mutually exclusive.
 

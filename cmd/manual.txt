@@ -9,7 +9,7 @@ namo generates memorable, sortable names of the form:
     |            |            |
     prefix       stamp        slug
 
-- prefix: optional descriptive label you pass with -p.
+- prefix: optional descriptive label you pass with -p or --raw-prefix.
 - stamp:  timestamp, yymmddhhmmss by default, so names sort
           chronologically and stay unique through time. Local time.
 - slug:   memorable random words from hotdiva2000, for human
@@ -23,7 +23,10 @@ goes to stderr, so command substitution is always safe:
 Flags
 -----
 
--p, --prefix TEXT    Descriptive prefix joined with a hyphen.
+-p, --prefix TEXT    Strictly normalized descriptive prefix joined
+                     with a hyphen.
+    --raw-prefix TEXT
+                     Exact passthrough prefix joined with a hyphen.
 -n, --count N        Generate N names (default 1). The whole batch
                      shares one timestamp; slugs are unique within
                      the batch.
@@ -38,6 +41,20 @@ Flags
                      ephemeral names you only need to tell apart
                      within a day.
     --no-stamp       Omit the timestamp entirely: just the slug.
+
+--prefix accepts ASCII letters and digits as content, lowercases
+letters, replaces each run of other characters with one dash, and
+removes edge dashes. It errors if no ASCII letters or digits remain.
+Use --raw-prefix to pass the prefix text through exactly. --prefix and
+--raw-prefix are mutually exclusive.
+
+For example:
+
+    namo -p "Debug Output / API"
+    # debug-output-api-260711154501-star-studded-booze-cruise
+
+    namo --raw-prefix "Build_42"
+    # Build_42-260711154501-star-studded-booze-cruise
 
 --stamp, --short-stamp, and --no-stamp are mutually exclusive.
 
