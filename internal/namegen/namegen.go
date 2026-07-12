@@ -13,9 +13,15 @@ import (
 // stamp flags are given.
 const DefaultStampLayout = "%y%m%d%H%M%S"
 
-// maxRounds bounds the unique-slug top-up loop so impossible counts fail
-// with a clear error instead of spinning forever.
-const maxRounds = 100
+const (
+	// MinCount is the minimum number of names Generate accepts.
+	MinCount = 1
+	// MaxCount is the maximum number of names Generate accepts.
+	MaxCount = 100
+	// maxRounds bounds the unique-slug top-up loop so impossible counts fail
+	// with a clear error instead of spinning forever.
+	maxRounds = 100
+)
 
 // Size selects how long generated slugs are.
 type Size string
@@ -57,6 +63,14 @@ func NormalizePrefix(s string) (string, error) {
 	return normalized.String(), nil
 }
 
+// ValidateCount validates the number of names requested for one batch.
+func ValidateCount(count int) error {
+	if count < MinCount || count > MaxCount {
+		return fmt.Errorf("count must be between %d and %d, got %d", MinCount, MaxCount, count)
+	}
+	return nil
+}
+
 // ParseSize validates a user-supplied size name.
 func ParseSize(s string) (Size, error) {
 	switch Size(s) {
@@ -79,7 +93,7 @@ func (s Size) thresholds() (prefix, suffix float64) {
 
 // Options configures Generate.
 type Options struct {
-	// Count is the number of names to generate; must be at least 1.
+	// Count is the number of names to generate; must be between MinCount and MaxCount.
 	Count int
 	// Now supplies the timestamp moment; nil means time.Now. It is called
 	// exactly once per Generate so every name in a batch shares one stamp.
@@ -97,8 +111,8 @@ type Options struct {
 // Generate returns Count names of the form [prefix-][stamp-]slug, all sharing
 // the same optional timestamp, with each slug unique within the batch.
 func Generate(opts Options) ([]string, error) {
-	if opts.Count < 1 {
-		return nil, fmt.Errorf("count must be at least 1, got %d", opts.Count)
+	if err := ValidateCount(opts.Count); err != nil {
+		return nil, err
 	}
 	now := opts.Now
 	if now == nil {
@@ -159,14 +173,23 @@ func Generate(opts Options) ([]string, error) {
 	return names, nil
 }
 
-// validSlug rejects malformed hotdiva2000 output: its embedded word lists
-// each contain one empty entry, which occasionally yields slugs with a
-// leading, trailing, or doubled hyphen.
 func validSlug(s string) bool {
-	return s != "" &&
-		!strings.HasPrefix(s, "-") &&
-		!strings.HasSuffix(s, "-") &&
-		!strings.Contains(s, "--")
+	if s == "" {
+		return false
+	}
+	componentHasContent := false
+	for i := 0; i < len(s); i++ {
+		char := s[i]
+		switch {
+		case (char >= 'a' && char <= 'z') || (char >= '0' && char <= '9'):
+			componentHasContent = true
+		case char == '-' && componentHasContent:
+			componentHasContent = false
+		default:
+			return false
+		}
+	}
+	return componentHasContent
 }
 
 func hotdivaSlugs(n int, prefixThreshold, suffixThreshold float64) []string {
