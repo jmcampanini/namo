@@ -8,6 +8,8 @@ import (
 	"testing"
 )
 
+const slugPattern = `[a-z0-9]+(-[a-z0-9]+)*`
+
 func runCommand(t *testing.T, args ...string) (string, string, error) {
 	t.Helper()
 	if args == nil {
@@ -30,13 +32,13 @@ func TestRootCommand(t *testing.T) {
 		wantMatch string
 		wantErr   string
 	}{
-		{name: "default", args: []string{}, wantLines: 1, wantMatch: `^\d{12}-[a-z0-9]+(-[a-z0-9]+)*$`},
-		{name: "prefix", args: []string{"-p", "debug-output"}, wantLines: 1, wantMatch: `^debug-output-\d{12}-[a-z0-9]+(-[a-z0-9]+)*$`},
-		{name: "no stamp", args: []string{"--no-stamp"}, wantLines: 1, wantMatch: `^[a-z0-9]+(-[a-z0-9]+)*$`},
-		{name: "short stamp", args: []string{"--short-stamp"}, wantLines: 1, wantMatch: `^\d{4}-[a-z0-9]+(-[a-z0-9]+)*$`},
-		{name: "custom stamp", args: []string{"--stamp", "%Y%m%d"}, wantLines: 1, wantMatch: `^\d{8}-[a-z0-9]+(-[a-z0-9]+)*$`},
-		{name: "count", args: []string{"-n", "3"}, wantLines: 3, wantMatch: `^\d{12}-[a-z0-9]+(-[a-z0-9]+)*$`},
-		{name: "size short", args: []string{"-s", "short", "--no-stamp"}, wantLines: 1, wantMatch: `^[a-z0-9]+(-[a-z0-9]+)*$`},
+		{name: "default", args: []string{}, wantLines: 1, wantMatch: `^\d{12}-` + slugPattern + `$`},
+		{name: "prefix", args: []string{"-p", "debug-output"}, wantLines: 1, wantMatch: `^debug-output-\d{12}-` + slugPattern + `$`},
+		{name: "no stamp", args: []string{"--no-stamp"}, wantLines: 1, wantMatch: `^` + slugPattern + `$`},
+		{name: "short stamp", args: []string{"--short-stamp"}, wantLines: 1, wantMatch: `^\d{4}-` + slugPattern + `$`},
+		{name: "custom stamp", args: []string{"--stamp", "%Y%m%d"}, wantLines: 1, wantMatch: `^\d{8}-` + slugPattern + `$`},
+		{name: "count", args: []string{"-n", "3"}, wantLines: 3, wantMatch: `^\d{12}-` + slugPattern + `$`},
+		{name: "size short", args: []string{"-s", "short", "--no-stamp"}, wantLines: 1, wantMatch: `^` + slugPattern + `$`},
 		{name: "unsupported stamp verb", args: []string{"--stamp", "%q"}, wantErr: "unsupported stamp verb"},
 		{name: "stamp flags mutually exclusive", args: []string{"--no-stamp", "--short-stamp"}, wantErr: "none of the others can be"},
 		{name: "custom stamp with no-stamp rejected", args: []string{"--stamp", "%y", "--no-stamp"}, wantErr: "none of the others can be"},
@@ -183,7 +185,7 @@ func TestRootCommandEmptyRawPrefixBehavesAsNoPrefix(t *testing.T) {
 	if stderr != "" {
 		t.Fatalf("Execute() stderr = %q, want empty", stderr)
 	}
-	if !regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*\n$`).MatchString(stdout) {
+	if !regexp.MustCompile(`^` + slugPattern + `\n$`).MatchString(stdout) {
 		t.Fatalf("output = %q, want an unprefixed slug", stdout)
 	}
 }
@@ -223,7 +225,7 @@ func assertPrefixedName(t *testing.T, stdout, prefix string) {
 		t.Fatalf("output = %q, want prefix %q", stdout, wantPrefix)
 	}
 	slug := strings.TrimPrefix(stdout, wantPrefix)
-	if !regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)*\n$`).MatchString(slug) {
+	if !regexp.MustCompile(`^` + slugPattern + `\n$`).MatchString(slug) {
 		t.Fatalf("output slug %q is not a names-only slug", slug)
 	}
 }
