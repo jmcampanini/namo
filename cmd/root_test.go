@@ -221,7 +221,7 @@ func TestPrefixSafetyText(t *testing.T) {
 			args: []string{"docs"},
 			want: []string{
 				"--prefix accepts ASCII letters and digits",
-				"Use --raw-prefix to pass the prefix text through exactly",
+				"--raw-prefix is a trusted-input-only unsafe escape hatch",
 				"--raw-prefix are mutually exclusive",
 			},
 		},
