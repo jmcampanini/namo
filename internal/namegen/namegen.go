@@ -1,4 +1,4 @@
-// Package namegen composes [prefix-]stamp-slug names.
+// Package namegen composes [prefix-][stamp-]slug names.
 package namegen
 
 import (
@@ -28,6 +28,34 @@ const (
 	// SizeLong always adds extra prefix and suffix words.
 	SizeLong Size = "long"
 )
+
+// NormalizePrefix converts a prefix to lowercase ASCII words separated by dashes.
+func NormalizePrefix(s string) (string, error) {
+	var normalized strings.Builder
+	normalized.Grow(len(s))
+	separator := false
+
+	for i := 0; i < len(s); i++ {
+		char := s[i]
+		if char >= 'A' && char <= 'Z' {
+			char += 'a' - 'A'
+		}
+		if (char >= 'a' && char <= 'z') || (char >= '0' && char <= '9') {
+			if separator && normalized.Len() > 0 {
+				normalized.WriteByte('-')
+			}
+			normalized.WriteByte(char)
+			separator = false
+			continue
+		}
+		separator = true
+	}
+
+	if normalized.Len() == 0 {
+		return "", fmt.Errorf("prefix must contain at least one ASCII letter or digit")
+	}
+	return normalized.String(), nil
+}
 
 // ParseSize validates a user-supplied size name.
 func ParseSize(s string) (Size, error) {
@@ -66,8 +94,8 @@ type Options struct {
 	Stamp string
 }
 
-// Generate returns Count names of the form [prefix-]stamp-slug, all sharing
-// a single timestamp, with each slug unique within the batch.
+// Generate returns Count names of the form [prefix-][stamp-]slug, all sharing
+// the same optional timestamp, with each slug unique within the batch.
 func Generate(opts Options) ([]string, error) {
 	if opts.Count < 1 {
 		return nil, fmt.Errorf("count must be at least 1, got %d", opts.Count)
@@ -112,16 +140,21 @@ func Generate(opts Options) ([]string, error) {
 		}
 	}
 
+	parts := make([]string, 0, 2)
+	if opts.Prefix != "" {
+		parts = append(parts, opts.Prefix)
+	}
+	if stamp != "" {
+		parts = append(parts, stamp)
+	}
+	namePrefix := strings.Join(parts, "-")
+	if namePrefix != "" {
+		namePrefix += "-"
+	}
+
 	names := make([]string, opts.Count)
 	for i, slug := range unique {
-		parts := make([]string, 0, 3)
-		if opts.Prefix != "" {
-			parts = append(parts, opts.Prefix)
-		}
-		if stamp != "" {
-			parts = append(parts, stamp)
-		}
-		names[i] = strings.Join(append(parts, slug), "-")
+		names[i] = namePrefix + slug
 	}
 	return names, nil
 }

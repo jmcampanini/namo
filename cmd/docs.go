@@ -14,7 +14,7 @@ func newDocsCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "docs",
 		Short: "Print the namo reference manual.",
-		Long:  "Print the complete namo reference: the name pattern, every flag,\nstamp layout verbs, sizes, and usage recipes. Pipeable to less or bat.",
+		Long:  "Print the namo reference: the name pattern, generation flags,\nstamp layout verbs, sizes, and usage recipes. Pipeable to less or bat.",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			_, err := fmt.Fprint(cmd.OutOrStdout(), manual)

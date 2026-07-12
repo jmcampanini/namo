@@ -3,27 +3,33 @@ namo reference
 
 namo generates memorable, sortable names of the form:
 
-    [prefix-]stamp-slug
+    [prefix-][stamp-]slug
 
     debug-output-260711154501-star-studded-booze-cruise
     |            |            |
     prefix       stamp        slug
 
-- prefix: optional descriptive label you pass with -p.
-- stamp:  timestamp, yymmddhhmmss by default, so names sort
-          chronologically and stay unique through time. Local time.
+- prefix: optional descriptive label passed with -p/--prefix or
+          --raw-prefix.
+- stamp:  timestamp, yymmddhhmmss by default, providing a local-time
+          sort key.
 - slug:   memorable random words from hotdiva2000, for human
           identification.
 
-Names print to stdout, one per line. Everything else (errors, help)
-goes to stderr, so command substitution is always safe:
+Generated names and other successful command output, including help,
+go to stdout; errors go to stderr. Without --raw-prefix or a custom
+--stamp, generated output contains one name per line, making uses such
+as this safe:
 
     filename=".sandbox/$(namo -p debug-output).log"
 
 Flags
 -----
 
--p, --prefix TEXT    Descriptive prefix joined with a hyphen.
+-p, --prefix TEXT    Strictly normalized descriptive prefix joined
+                     with a hyphen.
+    --raw-prefix TEXT
+                     Trusted-input-only unsafe prefix passthrough.
 -n, --count N        Generate N names (default 1). The whole batch
                      shares one timestamp; slugs are unique within
                      the batch.
@@ -37,7 +43,26 @@ Flags
     --short-stamp    HHMM timestamp (same as --stamp %H%M), for
                      ephemeral names you only need to tell apart
                      within a day.
-    --no-stamp       Omit the timestamp entirely: just the slug.
+    --no-stamp       Omit the timestamp while retaining any prefix.
+
+--prefix accepts ASCII letters and digits as content, lowercases
+letters, replaces each run of other characters with one dash, and
+removes edge dashes. It errors if no ASCII letters or digits remain.
+--raw-prefix is a trusted-input-only unsafe escape hatch. For a
+non-empty raw prefix, namo preserves the supplied bytes and then adds
+one joining hyphen; a trailing dash can therefore produce doubled
+dashes. An empty raw prefix behaves as no prefix. Raw line breaks,
+control bytes, and path separators are preserved, so they can bypass
+the normal one-name-per-line, command-substitution, terminal, and path
+safety guarantees. --prefix and --raw-prefix are mutually exclusive.
+
+For example:
+
+    namo -p "Debug Output / API"
+    # debug-output-api-260711154501-star-studded-booze-cruise
+
+    namo --raw-prefix "Build_42"
+    # Build_42-260711154501-star-studded-booze-cruise
 
 --stamp, --short-stamp, and --no-stamp are mutually exclusive.
 

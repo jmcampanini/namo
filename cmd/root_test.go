@@ -70,6 +70,111 @@ func TestRootCommand(t *testing.T) {
 	}
 }
 
+func TestRootCommandStrictPrefix(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{name: "complex normalization", args: []string{"--prefix", "  Debug__Output---V2  "}, want: "debug-output-v2"},
+		{name: "repeated flag uses last value", args: []string{"-p", "first", "--prefix", "FINAL value"}, want: "final-value"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.args = append(tt.args, "--no-stamp")
+			stdout, stderr, err := runCommand(t, tt.args...)
+			if err != nil {
+				t.Fatalf("Execute(%v) error = %v", tt.args, err)
+			}
+			if stderr != "" {
+				t.Fatalf("Execute(%v) stderr = %q, want empty", tt.args, stderr)
+			}
+			assertPrefixedName(t, stdout, tt.want)
+		})
+	}
+}
+
+func TestRootCommandStrictPrefixRejectsEmptyNormalizedInput(t *testing.T) {
+	for _, prefix := range []string{"", "--- ! ☃ ---"} {
+		stdout, _, err := runCommand(t, "--prefix", prefix, "--no-stamp")
+		if err == nil || !strings.Contains(err.Error(), "prefix must contain at least one ASCII letter or digit") {
+			t.Fatalf("Execute(--prefix %q) error = %v, want ASCII validation error", prefix, err)
+		}
+		if stdout != "" {
+			t.Fatalf("Execute(--prefix %q) stdout = %q, want empty", prefix, stdout)
+		}
+	}
+}
+
+func TestRootCommandRawPrefix(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{name: "preserved verbatim", args: []string{"--raw-prefix=--Raw Prefix!?--"}, want: "--Raw Prefix!?--"},
+		{name: "unicode preserved", args: []string{"--raw-prefix", "東京💥é"}, want: "東京💥é"},
+		{name: "trailing hyphen keeps joining hyphen", args: []string{"--raw-prefix", "trusted-"}, want: "trusted-"},
+		{name: "embedded newline preserved", args: []string{"--raw-prefix", "first\nsecond"}, want: "first\nsecond"},
+		{name: "repeated flag uses last value", args: []string{"--raw-prefix", "first", "--raw-prefix", "LAST value!?"}, want: "LAST value!?"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.args = append(tt.args, "--no-stamp")
+			stdout, stderr, err := runCommand(t, tt.args...)
+			if err != nil {
+				t.Fatalf("Execute(%v) error = %v", tt.args, err)
+			}
+			if stderr != "" {
+				t.Fatalf("Execute(%v) stderr = %q, want empty", tt.args, stderr)
+			}
+			assertPrefixedName(t, stdout, tt.want)
+		})
+	}
+}
+
+func TestRootCommandEmptyRawPrefixBehavesAsNoPrefix(t *testing.T) {
+	stdout, stderr, err := runCommand(t, "--raw-prefix=", "--no-stamp")
+	if err != nil {
+		t.Fatalf("Execute() error = %v", err)
+	}
+	if stderr != "" {
+		t.Fatalf("Execute() stderr = %q, want empty", stderr)
+	}
+	if !regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)+\n$`).MatchString(stdout) {
+		t.Fatalf("output = %q, want an unprefixed slug", stdout)
+	}
+}
+
+func TestRootCommandPrefixModesAreMutuallyExclusive(t *testing.T) {
+	for _, args := range [][]string{
+		{"--prefix", "strict", "--raw-prefix", "raw"},
+		{"--prefix=", "--raw-prefix="},
+	} {
+		stdout, _, err := runCommand(t, args...)
+		if err == nil {
+			t.Fatalf("Execute(%v) error = nil, want mutually exclusive flag error", args)
+		}
+		if stdout != "" {
+			t.Fatalf("Execute(%v) stdout = %q, want empty", args, stdout)
+		}
+	}
+}
+
+func assertPrefixedName(t *testing.T, stdout, prefix string) {
+	t.Helper()
+	wantPrefix := prefix + "-"
+	if !strings.HasPrefix(stdout, wantPrefix) {
+		t.Fatalf("output = %q, want prefix %q", stdout, wantPrefix)
+	}
+	slug := strings.TrimPrefix(stdout, wantPrefix)
+	if !regexp.MustCompile(`^[a-z0-9]+(-[a-z0-9]+)+\n$`).MatchString(slug) {
+		t.Fatalf("output slug %q is not a names-only slug", slug)
+	}
+}
+
 func TestRootCommandBatchSharesStamp(t *testing.T) {
 	stdout, _, err := runCommand(t, "-n", "5")
 	if err != nil {
@@ -93,13 +198,36 @@ func TestRootCommandBatchSharesStamp(t *testing.T) {
 	}
 }
 
+func TestHelpIncludesPrefixModes(t *testing.T) {
+	stdout, stderr, err := runCommand(t, "--help")
+	if err != nil {
+		t.Fatalf("Execute(--help) error = %v", err)
+	}
+	if stderr != "" {
+		t.Fatalf("Execute(--help) stderr = %q, want empty", stderr)
+	}
+	for _, want := range []string{"--prefix", "ASCII-normalized", "--raw-prefix", "unsafe", "non-empty", "joining hyphen", "empty omits the prefix"} {
+		if !strings.Contains(stdout, want) {
+			t.Fatalf("Execute(--help) output does not contain %q:\n%s", want, stdout)
+		}
+	}
+}
+
 func TestDocsCommand(t *testing.T) {
-	stdout, _, err := runCommand(t, "docs")
+	stdout, stderr, err := runCommand(t, "docs")
 	if err != nil {
 		t.Fatalf("Execute(docs) error = %v", err)
 	}
-	if !strings.Contains(stdout, "namo") {
-		t.Fatalf("docs output does not mention namo:\n%s", stdout)
+	if stdout != manual {
+		t.Fatalf("Execute(docs) output does not match embedded manual")
+	}
+	for _, want := range []string{"[prefix-][stamp-]slug", "Omit the timestamp while retaining any prefix", "non-empty raw prefix", "empty raw prefix behaves as no prefix"} {
+		if !strings.Contains(stdout, want) {
+			t.Fatalf("Execute(docs) output does not contain %q", want)
+		}
+	}
+	if stderr != "" {
+		t.Fatalf("Execute(docs) stderr = %q, want empty", stderr)
 	}
 }
 

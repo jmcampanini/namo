@@ -25,6 +25,53 @@ func stubSlugs(values ...string) func(n int, prefixThreshold, suffixThreshold fl
 	}
 }
 
+func TestNormalizePrefix(t *testing.T) {
+	tests := []struct {
+		name    string
+		input   string
+		want    string
+		wantErr bool
+	}{
+		{name: "canonical unchanged", input: "release-2026", want: "release-2026"},
+		{name: "uppercase lowered", input: "ReleaseCandidate42", want: "releasecandidate42"},
+		{name: "digits retained", input: "123ABC789", want: "123abc789"},
+		{name: "separator runs collapsed", input: "one \t--💥...two", want: "one-two"},
+		{name: "edges trimmed", input: "--- alpha beta !!!", want: "alpha-beta"},
+		{name: "unicode separates ASCII", input: "café東京Build", want: "caf-build"},
+		{name: "accented uppercase is not converted", input: "Éclair", want: "clair"},
+		{name: "slashes and underscores replaced", input: "team_name/feature", want: "team-name-feature"},
+		{name: "malformed UTF-8 separates ASCII", input: string([]byte{'A', 0xff, 'B', 0xc0, 'C'}), want: "a-b-c"},
+		{name: "empty", input: "", wantErr: true},
+		{name: "hyphens only", input: "---", wantErr: true},
+		{name: "whitespace only", input: " \t\n", wantErr: true},
+		{name: "punctuation only", input: "!@#$%^&*()", wantErr: true},
+		{name: "unicode only", input: "東京é💥", wantErr: true},
+		{name: "malformed UTF-8 only", input: string([]byte{0xff, 0xfe}), wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := NormalizePrefix(tt.input)
+			if tt.wantErr {
+				if err == nil || !strings.Contains(err.Error(), "prefix must contain at least one ASCII letter or digit") {
+					t.Fatalf("NormalizePrefix(%q) error = %v, want ASCII validation error", tt.input, err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("NormalizePrefix(%q) error = %v", tt.input, err)
+			}
+			if got != tt.want {
+				t.Fatalf("NormalizePrefix(%q) = %q, want %q", tt.input, got, tt.want)
+			}
+			canonical, err := NormalizePrefix(got)
+			if err != nil || canonical != got {
+				t.Fatalf("NormalizePrefix(%q) = %q, %v; want canonical input unchanged", got, canonical, err)
+			}
+		})
+	}
+}
+
 func TestGenerateCompose(t *testing.T) {
 	tests := []struct {
 		name string
