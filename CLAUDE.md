@@ -17,7 +17,8 @@ Run `make help` for the task list. Key tasks:
 - The binary is built to `build/namo`, not the repo root.
 - Scratch/smoke output goes under `.claude-sandbox/<scenario>/`, not `/tmp/`.
 - Keep `cmd/manual.txt` in sync when changing CLI behavior or flags.
-- Name output is consumed by shell command substitution and LLM agents: stdout carries names only, one per line; everything else goes to stderr.
+- Normal output, including strict `--prefix` output, is consumed by shell command substitution and LLM agents: stdout carries names only, one per line; everything else goes to stderr.
+- `--raw-prefix` is the intentional trusted-input-only exception: preserved line breaks, control bytes, and path separators can make stdout unsafe for command substitution, terminals, and paths.
 
 ## Before committing
 
