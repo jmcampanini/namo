@@ -1,6 +1,7 @@
 class Namo < Formula
   desc "Generate memorable, sortable names"
   homepage "https://github.com/jmcampanini/namo"
+  license "MIT"
   head "https://github.com/jmcampanini/namo.git", branch: "main"
 
   depends_on "go" => :build
