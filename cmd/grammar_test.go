@@ -152,7 +152,7 @@ func TestCommandGrammar(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			root := newRootCmd()
 			invocations := spyCommandRunners(root)
-			command, stdout, _, err := executeCommand(t, root, test.args...)
+			command, stdout, stderr, err := executeCommand(t, root, test.args...)
 
 			if command == nil {
 				t.Fatalf("Execute(%v) selected no command", test.args)
@@ -166,6 +166,9 @@ func TestCommandGrammar(t *testing.T) {
 				}
 			} else if err == nil || !strings.Contains(err.Error(), test.wantErr) {
 				t.Fatalf("Execute(%v) error = %v, want containing %q", test.args, err, test.wantErr)
+			}
+			if test.wantErr != "" && stderr != "" {
+				t.Errorf("Execute(%v) stderr = %q, want empty", test.args, stderr)
 			}
 
 			if test.wantOutput && stdout == "" {
