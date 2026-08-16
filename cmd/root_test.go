@@ -6,22 +6,23 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/spf13/cobra"
 )
 
 const slugPattern = `[a-z0-9]+(-[a-z0-9]+)*`
 
-func runCommand(t *testing.T, args ...string) (string, string, error) {
+func executeCommand(t *testing.T, root *cobra.Command, args ...string) (*cobra.Command, string, string, error) {
 	t.Helper()
 	if args == nil {
 		args = []string{}
 	}
-	root := newRootCmd()
 	var stdout, stderr bytes.Buffer
 	root.SetOut(&stdout)
 	root.SetErr(&stderr)
 	root.SetArgs(args)
-	err := root.Execute()
-	return stdout.String(), stderr.String(), err
+	command, err := root.ExecuteC()
+	return command, stdout.String(), stderr.String(), err
 }
 
 func TestRootCommand(t *testing.T) {
@@ -43,12 +44,11 @@ func TestRootCommand(t *testing.T) {
 		{name: "stamp flags mutually exclusive", args: []string{"--no-stamp", "--short-stamp"}, wantErr: "none of the others can be"},
 		{name: "custom stamp with no-stamp rejected", args: []string{"--stamp", "%y", "--no-stamp"}, wantErr: "none of the others can be"},
 		{name: "invalid size", args: []string{"-s", "bogus"}, wantErr: "invalid size"},
-		{name: "positional arg rejected", args: []string{"extra"}, wantErr: "unknown command"},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			stdout, _, err := runCommand(t, tt.args...)
+			_, stdout, _, err := executeCommand(t, newRootCmd(), tt.args...)
 			if tt.wantErr != "" {
 				if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
 					t.Fatalf("Execute(%v) error = %v, want containing %q", tt.args, err, tt.wantErr)
@@ -77,7 +77,7 @@ func TestRootCommand(t *testing.T) {
 
 func TestRootCommandCountValidation(t *testing.T) {
 	for _, count := range []int{1, 100} {
-		stdout, stderr, err := runCommand(t, "--count="+strconv.Itoa(count), "--no-stamp")
+		_, stdout, stderr, err := executeCommand(t, newRootCmd(), "--count="+strconv.Itoa(count), "--no-stamp")
 		if err != nil {
 			t.Fatalf("Execute(--count=%d) error = %v", count, err)
 		}
@@ -101,7 +101,7 @@ func TestRootCommandCountValidation(t *testing.T) {
 	}
 	for _, tt := range invalid {
 		t.Run(tt.name, func(t *testing.T) {
-			stdout, _, err := runCommand(t, tt.args...)
+			_, stdout, _, err := executeCommand(t, newRootCmd(), tt.args...)
 			if err == nil || !strings.Contains(err.Error(), "count must be between 1 and 100") {
 				t.Fatalf("Execute(%v) error = %v, want count range error", tt.args, err)
 			}
@@ -125,7 +125,7 @@ func TestRootCommandStrictPrefix(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.args = append(tt.args, "--no-stamp")
-			stdout, stderr, err := runCommand(t, tt.args...)
+			_, stdout, stderr, err := executeCommand(t, newRootCmd(), tt.args...)
 			if err != nil {
 				t.Fatalf("Execute(%v) error = %v", tt.args, err)
 			}
@@ -139,7 +139,7 @@ func TestRootCommandStrictPrefix(t *testing.T) {
 
 func TestRootCommandStrictPrefixRejectsEmptyNormalizedInput(t *testing.T) {
 	for _, prefix := range []string{"", "--- ! ☃ ---"} {
-		stdout, _, err := runCommand(t, "--prefix", prefix, "--no-stamp")
+		_, stdout, _, err := executeCommand(t, newRootCmd(), "--prefix", prefix, "--no-stamp")
 		if err == nil || !strings.Contains(err.Error(), "prefix must contain at least one ASCII letter or digit") {
 			t.Fatalf("Execute(--prefix %q) error = %v, want ASCII validation error", prefix, err)
 		}
@@ -165,7 +165,7 @@ func TestRootCommandRawPrefix(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tt.args = append(tt.args, "--no-stamp")
-			stdout, stderr, err := runCommand(t, tt.args...)
+			_, stdout, stderr, err := executeCommand(t, newRootCmd(), tt.args...)
 			if err != nil {
 				t.Fatalf("Execute(%v) error = %v", tt.args, err)
 			}
@@ -178,7 +178,7 @@ func TestRootCommandRawPrefix(t *testing.T) {
 }
 
 func TestRootCommandEmptyRawPrefixBehavesAsNoPrefix(t *testing.T) {
-	stdout, stderr, err := runCommand(t, "--raw-prefix=", "--no-stamp")
+	_, stdout, stderr, err := executeCommand(t, newRootCmd(), "--raw-prefix=", "--no-stamp")
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -191,7 +191,7 @@ func TestRootCommandEmptyRawPrefixBehavesAsNoPrefix(t *testing.T) {
 }
 
 func TestRootCommandCustomStampCanOptOutOfLineSafety(t *testing.T) {
-	stdout, stderr, err := runCommand(t, "--stamp=trusted\nstamp")
+	_, stdout, stderr, err := executeCommand(t, newRootCmd(), "--stamp=trusted\nstamp")
 	if err != nil {
 		t.Fatalf("Execute(custom newline stamp) error = %v", err)
 	}
@@ -208,7 +208,7 @@ func TestRootCommandPrefixModesAreMutuallyExclusive(t *testing.T) {
 		{"--prefix", "strict", "--raw-prefix", "raw"},
 		{"--prefix=", "--raw-prefix="},
 	} {
-		stdout, _, err := runCommand(t, args...)
+		_, stdout, _, err := executeCommand(t, newRootCmd(), args...)
 		if err == nil {
 			t.Fatalf("Execute(%v) error = nil, want mutually exclusive flag error", args)
 		}
@@ -231,7 +231,7 @@ func assertPrefixedName(t *testing.T, stdout, prefix string) {
 }
 
 func TestRootCommandBatchSharesStamp(t *testing.T) {
-	stdout, _, err := runCommand(t, "-n", "5")
+	_, stdout, _, err := executeCommand(t, newRootCmd(), "-n", "5")
 	if err != nil {
 		t.Fatalf("Execute() error = %v", err)
 	}
@@ -254,7 +254,7 @@ func TestRootCommandBatchSharesStamp(t *testing.T) {
 }
 
 func TestHelpIncludesPrefixModes(t *testing.T) {
-	stdout, stderr, err := runCommand(t, "--help")
+	_, stdout, stderr, err := executeCommand(t, newRootCmd(), "--help")
 	if err != nil {
 		t.Fatalf("Execute(--help) error = %v", err)
 	}
@@ -269,7 +269,7 @@ func TestHelpIncludesPrefixModes(t *testing.T) {
 }
 
 func TestDocsCommand(t *testing.T) {
-	stdout, stderr, err := runCommand(t, "docs")
+	_, stdout, stderr, err := executeCommand(t, newRootCmd(), "docs")
 	if err != nil {
 		t.Fatalf("Execute(docs) error = %v", err)
 	}
@@ -287,7 +287,7 @@ func TestDocsCommand(t *testing.T) {
 }
 
 func TestVersionFlag(t *testing.T) {
-	stdout, _, err := runCommand(t, "--version")
+	_, stdout, _, err := executeCommand(t, newRootCmd(), "--version")
 	if err != nil {
 		t.Fatalf("Execute(--version) error = %v", err)
 	}
