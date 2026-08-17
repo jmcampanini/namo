@@ -1,60 +1,33 @@
-# Plan: Complete real-tree operand verification (issue #23)
+# Plan: Make local and CI verification complete, read-only, and reproducible (issue #5)
 
-Test-only change: verify the CLI grammar through the real Cobra tree using the fleet-standard "lean idiomatic table" (originating in gibson#32), with an application-command inventory guard and runner spies proving rejected input never reaches command work. No production code, CLI behavior, or `cmd/manual.txt` changes.
+Make `make check` the single complete verification contract, pin every analysis tool through `go.mod`, give builds deterministic identity, and prove the contract is read-only. Clean break: old target meanings are replaced in place with no compatibility aliases.
 
 ## Problem
 
-At `7c2529d`, the CLI has two application-owned commands — root (`namo`) and `docs` — both declaring `cobra.NoArgs`. The verification gaps:
+At `287698f`:
 
-1. `namo docs extra` (rejected operand on `docs`) is untested; only the root rejection is covered (`cmd/root_test.go`, "positional arg rejected").
-2. Nothing fails when a future command is added without an explicit grammar and owning scenario.
-3. Rejection tests assert empty stdout but do not prove the rejected operand never invoked the command's work.
-4. `docs --help`, unknown flags, and shell-completion generation are untested as short-circuit paths.
+1. `check` runs `fmt-check tidy-check lint test vuln`; CI separately runs `make build` and an assertion-free `--version` smoke, so build and version-injection defects are outside the contract AGENTS.md names as the single source of truth.
+2. `.golangci.yml` configures gofmt and goimports, but `make fmt`/`fmt-check` run gofmt only — a goimports-only diff fails `check` (via lint) yet `make fmt` cannot fix it.
+3. `make lint` uses whatever `golangci-lint` is on PATH while CI pins v2.12.2 via an action; parity is coincidence.
+4. `VERSION` falls back to wall-clock time outside git, and builds omit `-trimpath`/`-buildvcs` policy, so source-equivalent builds differ and embed checkout paths.
+5. Nothing proves `make check` leaves the tracked tree unchanged.
 
 ## Decisions
 
-- **Lean idiomatic table (fleet standard).** One table-driven test executes the real root command — fresh instance per case via `newRootCmd()`, runner spies injected — through the Cobra-idiom `executeCommand` helper (`SetArgs` + `SetOut`/`SetErr` + `Execute`). Grammar tests look identical to the other fleet Go CLIs.
-- **Rows cover what we own.** Bare-root generation, unknown command, unknown flags, help/version/completion short-circuits, valid invocations reaching their runners, and one rejected-operand row per application command proving rejected input never calls a runner. No arity permutation matrices — `cobra.NoArgs` mechanics are Cobra's own upstream-tested contract; re-testing the framework is what this avoids.
-- **Inventory guard on application commands.** The guard recursively walks the freshly built root's `Commands()`, skipping Cobra's auto-added `help` and `completion` subtrees, and fails — naming the path — when an application command lacks both a valid row and a rejected-operand row. Cobra built-ins are exercised as short-circuit scenarios, not inventoried as application commands.
-- **Test-only runner spies.** After building the real tree, the test wraps each command's `RunE` with a counter that delegates to the original. Rejection and short-circuit rows assert zero invocations tree-wide; valid rows assert exactly one invocation of the owning command. Production code is untouched — `RunE`-never-invoked is a strictly earlier boundary than the clock/slug provider, since `runRoot` is `Generate`'s only caller.
-- **Single owner per behavior.** The table owns grammar wiring, short-circuit routing, and pre-work rejection. Leaf/existing tests keep owning option translation and command semantics (generation output, docs content, help content, version content, flag exclusivity). The superseded `positional arg rejected` row in `TestRootCommand` is removed. Exit codes and process-level stderr belong to `main` and a binary-level proof, which namo does not have — explicitly out of scope here.
+These follow the fleet build-system policy and gsd, the fleet reference implementation, extended by three mechanisms new to the fleet (read-only CI guard, `version-check`, explicit build-identity flags).
 
-## Implementation
+- **`check: fmt-check tidy-check lint test build version-check vuln`.** The complete local contract; CI's required `check` context runs exactly `make check` plus a porcelain guard.
+- **Tools via `go.mod` tool directives.** `golangci-lint` v2.12.2 joins `govulncheck`; every invocation is `go tool <name>`. CI drops the golangci-lint install action.
+- **Formatting policy lives in `.golangci.yml` only.** `fmt` = `go tool golangci-lint fmt`; `fmt-check` = `go tool golangci-lint fmt --diff` (exits 1 on diff). The tracked-file gofmt machinery is deleted.
+- **Deterministic identity.** `VERSION` falls back to `unknown` (never wall-clock); builds add `-trimpath -buildvcs=false` (matching the Homebrew formula's VCS policy); `make build VERSION=x` remains a controlled override.
+- **`version-check`** runs the built binary and requires exactly `namo version $(VERSION)`, rejecting degenerate identities (`unknown`, `n/a`, empty) and any uninjected default.
+- **Read-only guard in CI.** The workflow snapshots `git status --porcelain` before `make check` and diffs it after, failing on tracked modifications or new untracked files.
+- **Single `test` target**: `go test -count=1 -race ./...` — uncached, race-on (fleet-canonical shape).
+- **Workflow renamed `check.yml`** in the gsd shape (`name: Check`, job `check`, `fetch-depth: 0`), keeping the concurrency group. The required status context stays `check`.
 
-All changes in package `cmd`: new file `cmd/grammar_test.go`, plus a row removal and helper rename in `cmd/root_test.go`.
+## Verification
 
-1. **Helper rename.** Rename `runCommand` → `executeCommand` (fleet idiom), updated everywhere in the same change. Behavior unchanged: fresh `newRootCmd()`, `SetArgs`, `SetOut`/`SetErr`, `Execute`, returning stdout/stderr/err.
-
-2. **Spy helper.** Walk a fresh tree; for each command with a `RunE`, replace it with a wrapper that increments a per-path counter and delegates to the original. Return counters keyed by command path.
-
-3. **Grammar table.** Rows carry args, the command path they exercise, the expected runner invocation (a path or none), and expectations on error substring and output presence:
-   - `namo` (bare root) → root runner invoked once, no error.
-   - `namo extra` → error contains `"unknown command"`, empty output, no runner.
-   - `namo --bogus` → error contains `"unknown flag"`, empty stdout, no runner.
-   - `namo --help` → no error, usage on stdout, no runner.
-   - `namo --version` → no error, output present, no runner.
-   - `namo docs` → docs runner invoked once, no error.
-   - `namo docs extra` → error contains `"unknown command"`, empty output, no runner.
-   - `namo docs --bogus` → error contains `"unknown flag"`, empty stdout, no runner.
-   - `namo docs --help` → no error, usage on stdout, no runner.
-   - `namo completion bash` → no error, non-empty script, no application runner.
-
-4. **Inventory guard.** Recursively collect application command paths (skipping the auto-added `help` and `completion` subtrees), then fail if any application command lacks both a valid row and a rejected-operand row, or if a row targets a path that no longer exists.
-
-5. **Remove superseded coverage.** Delete the `positional arg rejected` row from `TestRootCommand`; the grammar table is its single owner now.
-
-6. **Red-green check during implementation.** Temporarily confirm the guard bites: the inventory guard must fail when the docs rows are commented out, and a rejection row must fail if the spy assertion is inverted. Revert; these mutations do not ship.
-
-## Out of scope
-
-- No production code changes; no dependency-injection seams in `cmd`.
-- No CLI behavior change, so no `cmd/manual.txt` update.
-- No persisted state or mutation fixtures — the CLI is stateless.
-- No binary-level proof; `main`'s exit code and stderr formatting stay untested here.
-- Existing generation, docs-content, help-content, version-content, and flag-exclusivity tests stay as-is.
-
-## Agent-verified end-to-end workflow
-
-1. Run `make test`: the inventory guard proves every application command (root, `docs`) has valid and rejected-operand grammar rows and that no row targets a missing command; the table proves `namo extra`, `namo docs extra`, and unknown flags error with empty output and zero runner invocations tree-wide; valid root and `docs` rows reach exactly their own runner; help, version, and `completion bash` short-circuit without invoking any runner.
-2. Run `make check` (fmt, tidy, lint, race tests) and confirm it passes.
-3. Run `git status --porcelain` and confirm the tracked tree shows only `PLAN.md` and the `cmd/` test changes — no production files touched.
+1. Red-green probes (transient, not shipped): goimports-only diff fails `fmt-check`, `make fmt` fixes it, second `fmt-check` clean; untidy module fails `tidy-check`; lint defect fails `lint`; failing test and data race fail `test`; compile defect fails `build`; uninjected version and degenerate identity fail `version-check`.
+2. `make check` passes and `git status --porcelain` is identical before and after.
+3. Two clones of the same commit at different paths build with identical displayed identity, and the binaries contain no absolute checkout paths (`go version -m`, `strings`).
+4. The PR's single required `check` context executes the complete contract, including the porcelain guard.
