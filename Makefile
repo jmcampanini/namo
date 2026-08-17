@@ -1,58 +1,54 @@
-.PHONY: help build test lint lint-fix fmt fmt-check tidy tidy-check vuln check clean
-
-BUILD_DIR   := build
-BINARY      := $(BUILD_DIR)/namo
-CMD         := .
-PKG         := ./...
-GOFMT_FILES := $(shell git ls-files --cached --others --exclude-standard '*.go' | while IFS= read -r file; do [ -f "$$file" ] && printf '%s\n' "$$file"; done)
-
-VERSION := $(shell git describe --tags --dirty --always 2>/dev/null || date -u '+%Y-%m-%dT%H:%M:%SZ')
-LDFLAGS := -ldflags "-X github.com/jmcampanini/namo/cmd.Version=$(VERSION)"
-
 .DEFAULT_GOAL := help
 
-help: ## Show this help.
-	@awk 'BEGIN {FS = ":.*##"; printf "Usage:\n  make <target>\n\nTargets:\n"} /^[a-zA-Z0-9_.-]+:.*##/ { printf "  %-16s %s\n", $$1, $$2 }' $(MAKEFILE_LIST)
+BUILD_DIR := build
+BINARY := $(BUILD_DIR)/namo
+VERSION := $(shell git describe --tags --dirty --always 2>/dev/null || printf 'unknown')
+LDFLAGS := -ldflags "-X github.com/jmcampanini/namo/cmd.Version=$(VERSION)"
 
-build: ## Build namo into ./build/namo.
+.PHONY: help build test lint lint-fix fmt fmt-check tidy tidy-check version-check vuln check clean
+
+help: ## Show available targets.
+	@printf 'Usage: make <target>\n\nTargets:\n'
+	@awk 'BEGIN {FS = ":.*## "} /^[a-zA-Z0-9_-]+:.*## / {printf "  %-14s %s\n", $$1, $$2}' $(MAKEFILE_LIST) | LC_ALL=C sort
+
+build: ## Build build/namo with git-derived version metadata.
 	@mkdir -p $(BUILD_DIR)
-	go build $(LDFLAGS) -o $(BINARY) $(CMD)
+	go build -trimpath -buildvcs=false $(LDFLAGS) -o $(BINARY) .
 
-test: ## Run tests with the race detector.
-	go test -race $(PKG)
+test: ## Run all tests uncached with the race detector.
+	go test -count=1 -race ./...
 
-lint: ## Run golangci-lint.
-	golangci-lint run $(PKG)
+lint: ## Run static analysis.
+	go tool golangci-lint run
 
-lint-fix: ## Run golangci-lint with --fix.
-	golangci-lint run --fix $(PKG)
+lint-fix: ## Run static analysis with --fix.
+	go tool golangci-lint run --fix
 
-fmt: ## Format tracked Go files.
-	@if [ -n "$(GOFMT_FILES)" ]; then gofmt -w $(GOFMT_FILES); fi
+fmt: ## Format Go source files.
+	go tool golangci-lint fmt
 
-fmt-check: ## Fail if tracked Go files need gofmt.
-	@files="$$(gofmt -l $(GOFMT_FILES))"; \
-	if [ -n "$$files" ]; then \
-		echo "gofmt needed:"; \
-		echo "$$files"; \
-		echo "Run: make fmt"; \
-		exit 1; \
-	fi
+fmt-check: ## Verify formatting without changing files.
+	go tool golangci-lint fmt --diff
 
 tidy: ## Apply go mod tidy.
 	go mod tidy
 
-tidy-check: ## Fail if go mod tidy would change go.mod/go.sum.
-	@out=$$(go mod tidy -diff); rc=$$?; \
-	if [ $$rc -eq 0 ]; then exit 0; fi; \
-	if [ -n "$$out" ]; then echo "$$out"; echo "go mod tidy would change go.mod/go.sum"; exit 1; fi; \
-	echo "go mod tidy failed (rc=$$rc)"; exit $$rc
+tidy-check: ## Verify go.mod and go.sum are tidy without changing them.
+	go mod tidy -diff
+
+version-check: build ## Verify the built binary reports the injected version.
+	@case "$(VERSION)" in unknown|n/a|"") echo "degenerate version identity: '$(VERSION)'"; exit 1;; esac
+	@out="$$($(BINARY) --version)"; \
+	if [ "$$out" != "namo version $(VERSION)" ]; then \
+		echo "version mismatch: got '$$out', want 'namo version $(VERSION)'"; \
+		exit 1; \
+	fi
 
 vuln: ## Check dependencies and reachable code for known vulnerabilities.
 	go tool govulncheck ./...
 
-check: fmt-check tidy-check lint test vuln ## Run all non-mutating checks.
+check: fmt-check tidy-check lint test build version-check vuln ## Run the complete local verification contract.
 
-clean: ## Remove build artifacts, coverage files, and test cache.
+clean: ## Remove build artifacts and the Go test cache.
 	rm -rf $(BUILD_DIR) dist namo coverage.out coverage.html *.coverprofile
 	go clean -testcache

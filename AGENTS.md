@@ -2,9 +2,11 @@
 
 - Use `make`; do not invoke `go build` / `go test` / `golangci-lint` directly.
 - Run `make help` to discover available tasks. Key tasks are:
-  - Run `make build` to compile to `build/namo` with version ldflags.
-  - Run `make test` to execute `go test -race ./...`.
-  - Run `make check` to execute `fmt-check` + `tidy-check` + `lint` + `test`. **Run this before declaring work done.**
+  - Run `make build` to compile to `build/namo` with version ldflags, `-trimpath`, and `-buildvcs=false`.
+  - Run `make test` to execute `go test -count=1 -race ./...`.
+  - Run `make check` to execute `fmt-check` + `tidy-check` + `lint` + `test` + `build` + `version-check` + `vuln`. **Run this before declaring work done.**
+- Checks are read-only: `make check` must leave the tracked tree unchanged and create nothing outside ignored paths. CI verifies this.
+- Tools run through pinned `go.mod` tool declarations via `go tool`; never rely on globally installed golangci-lint or govulncheck.
 
 ## Conventions
 
