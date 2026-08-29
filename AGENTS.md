@@ -12,7 +12,6 @@
 
 - The binary is built to `build/namo`, not the repo root.
 - Keep `cmd/manual.txt` in sync when changing CLI behavior or flags.
-- Successful command output, including generated names, help, docs, and version information, goes to stdout; errors go to stderr.
 
 ## Before committing
 
