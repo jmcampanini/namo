@@ -29,9 +29,39 @@ func newRootCmd() *cobra.Command {
 	root := &cobra.Command{
 		Use:   "namo",
 		Short: "Generate memorable, sortable names.",
-		Long: "namo composes [prefix-][stamp-]slug names: an optional sortable timestamp plus a\n" +
-			"memorable random slug.\n\n" +
-			"  namo -p debug-output  ->  debug-output-260711154501-star-studded-booze-cruise",
+		Long: `Generate memorable, sortable names of the form [prefix-][stamp-]slug, for
+example debug-output-260711154501-star-studded-booze-cruise. The stamp is
+the local time, yymmddhhmmss by default, so names sort by creation time.
+The slug is random words from hotdiva2000: lowercase ASCII letters and
+digits joined by single hyphens.
+
+'namo' prints one name. -p/--prefix TEXT adds a prefix: ASCII letters and
+digits are kept, letters are lowercased, each run of other characters
+becomes one hyphen, edge hyphens are dropped, and a value with no ASCII
+letter or digit is an error. --raw-prefix TEXT adds the bytes exactly as
+given followed by one hyphen; an empty value adds nothing. -n/--count N
+prints N names, 1 to 100, that share one stamp and repeat no slug.
+-s/--size short|standard|long sets slug length: short is a modifier and a
+noun, standard sometimes adds a word at either end, long always adds one
+at each end. --stamp LAYOUT renders a strftime-style layout with %Y %y %m
+%d %H %M %S and %%, --short-stamp is --stamp %H%M, and --no-stamp omits
+the stamp and keeps any prefix. --prefix and --raw-prefix are mutually
+exclusive, as are --stamp, --short-stamp, and --no-stamp.
+
+namo has no configuration file, reads nothing from stdin, and takes every
+option as a flag. The stamp follows the local time zone.
+
+Names go to stdout, one per line; help and version output go to stdout
+too. Errors go to stderr as 'namo: error: <message>' with no usage text.
+namo never prompts, runs no external program, and never accesses the
+network. Without --raw-prefix or a custom --stamp, every name consists
+only of lowercase ASCII letters, digits, and hyphens, so it is safe inside
+"$(namo ...)" and in file paths. --raw-prefix and --stamp are trusted
+input: line breaks, control bytes, and path separators in them pass
+through unchanged.
+
+Run 'namo docs' for stamp layout verbs, size details, and recipes, and
+'namo help exit-codes' for exit status meanings.`,
 		Version:       Version,
 		Args:          cobra.NoArgs,
 		SilenceUsage:  true,
@@ -52,7 +82,7 @@ func newRootCmd() *cobra.Command {
 	root.MarkFlagsMutuallyExclusive("stamp", "short-stamp", "no-stamp")
 	root.MarkFlagsMutuallyExclusive("prefix", "raw-prefix")
 
-	root.AddCommand(newDocsCmd())
+	root.AddCommand(newDocsCmd(), newExitCodesCmd())
 
 	return root
 }

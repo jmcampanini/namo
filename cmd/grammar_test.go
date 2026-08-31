@@ -86,6 +86,33 @@ var grammarCases = []grammarCase{
 		wantOutput: true,
 	},
 	{
+		name:       "exit-codes",
+		args:       []string{"exit-codes"},
+		path:       "namo exit-codes",
+		coverage:   grammarCoverageValid,
+		wantRunner: "namo exit-codes",
+		wantOutput: true,
+	},
+	{
+		name:     "exit-codes rejects operand",
+		args:     []string{"exit-codes", "extra"},
+		path:     "namo exit-codes",
+		coverage: grammarCoverageRejectedOperand,
+		wantErr:  "unknown command",
+	},
+	{
+		name:    "exit-codes rejects unknown flag",
+		args:    []string{"exit-codes", "--bogus"},
+		path:    "namo exit-codes",
+		wantErr: "unknown flag",
+	},
+	{
+		name:       "exit-codes help",
+		args:       []string{"exit-codes", "--help"},
+		path:       "namo exit-codes",
+		wantOutput: true,
+	},
+	{
 		name:       "completion bash",
 		args:       []string{"completion", "bash"},
 		path:       "namo completion bash",
