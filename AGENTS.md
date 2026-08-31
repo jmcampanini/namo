@@ -12,6 +12,7 @@
 
 - The binary is built to `build/namo`, not the repo root.
 - Keep `cmd/manual.txt` in sync when changing CLI behavior or flags.
+- Keep command help the canonical user-facing documentation and the README a landing page; keep both consistent with observable behavior.
 
 ## Before committing
 
