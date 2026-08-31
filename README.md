@@ -1,21 +1,27 @@
 # namo
 
-`namo` generates memorable, sortable names: `[prefix-][stamp-]slug`, like `debug-output-260711154501-star-studded-booze-cruise`.
+namo generates memorable, sortable names of the form `[prefix-][stamp-]slug`, like `debug-output-260711154501-star-studded-booze-cruise`. The stamp is the local time (`yymmddhhmmss` by default), so names sort by creation time; the slug is random words from [hotdiva2000](https://github.com/charmbracelet/hotdiva2000), so a name is easy to recognize in a directory listing or a log. Typical uses are scratch files, log files, branch names, and batches of seed identifiers.
+
+Command help is the canonical reference: `namo --help` describes every flag, the output contract, and the safety guarantees, `namo help exit-codes` describes exit statuses, and `namo docs` prints the longer manual with stamp layout verbs, size details, and recipes.
 
 ## Install
+
+namo distributes from HEAD only; there is no release channel or tagged binary.
+
+### Homebrew
 
 ```sh
 brew tap jmcampanini/namo https://github.com/jmcampanini/namo
 brew install --HEAD jmcampanini/namo/namo
 ```
 
-To update a HEAD install:
+Upgrade to the latest commit:
 
 ```sh
 brew upgrade --fetch-HEAD namo
 ```
 
-For a source/dev build:
+### From source
 
 ```sh
 git clone https://github.com/jmcampanini/namo
@@ -24,7 +30,7 @@ make build
 ./build/namo --version
 ```
 
-## Quick start
+## Representative commands
 
 ```sh
 $ namo
@@ -32,9 +38,6 @@ $ namo
 
 $ namo -p "Debug Output / API"
 debug-output-api-260711154501-star-studded-booze-cruise
-
-$ namo --raw-prefix "Build_42"
-Build_42-260711154501-star-studded-booze-cruise
 
 $ namo --no-stamp
 ivy-league-daddy
@@ -48,30 +51,16 @@ $ namo -n 3 -s short
 260711154501-business-school
 ```
 
-The timestamp (`yymmddhhmmss`, local time) provides a lexically sortable label; the slug ([hotdiva2000](https://github.com/charmbracelet/hotdiva2000)) keeps names memorable. Without `--raw-prefix` or a custom `--stamp`, generated output contains one name per line and is safe for uses such as:
+Without `--raw-prefix` or a custom `--stamp`, each name is one line of lowercase ASCII letters, digits, and hyphens, so it is safe in command substitution and file paths:
 
 ```sh
 filename=".sandbox/$(namo -p debug-output).log"
 ```
 
-## Reference
+## Required external programs
 
-| Flag | Meaning |
-| --- | --- |
-| `-p, --prefix TEXT` | strictly normalized descriptive prefix joined with a hyphen |
-| `--raw-prefix TEXT` | trusted-input-only unsafe prefix passthrough |
-| `-n, --count N` | generate N names, where `1 <= count <= 100`, sharing one timestamp and unique slugs |
-| `-s, --size SIZE` | slug length: `short`, `standard` (default), `long` |
-| `--stamp LAYOUT` | custom strftime layout (default `%y%m%d%H%M%S`) |
-| `--short-stamp` | HHMM timestamp for ephemeral names |
-| `--no-stamp` | omit the timestamp while retaining any prefix |
+None. namo runs on its own and never accesses the network.
 
-`--prefix` accepts ASCII letters and digits as content, lowercases letters, replaces each run of other characters with one dash, and removes edge dashes. It errors if no ASCII letters or digits remain.
+## Configuration
 
-`--raw-prefix` is a trusted-input-only unsafe escape hatch. For a non-empty raw prefix, `namo` preserves the supplied bytes and then adds one joining hyphen; a trailing dash can therefore produce doubled dashes. An empty raw prefix behaves as no prefix. Raw line breaks, control bytes, and path separators are preserved, so they can bypass the normal one-name-per-line, command-substitution, terminal, and path safety guarantees. `--prefix` and `--raw-prefix` are mutually exclusive.
-
-`--count` accepts only `1 <= count <= 100`.
-
-A custom `--stamp` is also trusted input. Literal line breaks, control bytes, and path separators in its layout are preserved and can bypass the same output-safety guarantees. `--stamp`, `--short-stamp`, and `--no-stamp` are mutually exclusive.
-
-Run `namo docs` for stamp layout verbs, size details, and recipes.
+namo has no configuration file and no environment variables of its own; every option is a flag. The stamp uses the local time zone.

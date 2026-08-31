@@ -295,3 +295,40 @@ func TestVersionFlag(t *testing.T) {
 		t.Fatalf("version output = %q, want containing %q", stdout, "namo version")
 	}
 }
+
+func TestExitCodesTopicPrintsSameHelpFromBothEntryPoints(t *testing.T) {
+	_, direct, stderr, err := executeCommand(t, newRootCmd(), "exit-codes")
+	if err != nil {
+		t.Fatalf("Execute(exit-codes) error = %v, stderr = %s", err, stderr)
+	}
+	_, viaHelp, stderr, err := executeCommand(t, newRootCmd(), "help", "exit-codes")
+	if err != nil {
+		t.Fatalf("Execute(help exit-codes) error = %v, stderr = %s", err, stderr)
+	}
+
+	if direct != viaHelp {
+		t.Fatalf("exit-codes output differs between entry points:\n%s\n---\n%s", direct, viaHelp)
+	}
+	for _, want := range []string{"\n  0  ", "\n  1  ", "namo: error:"} {
+		if !strings.Contains(direct, want) {
+			t.Fatalf("exit-codes help missing %q:\n%s", want, direct)
+		}
+	}
+}
+
+func TestEveryApplicationCommandHasWrappedLongHelp(t *testing.T) {
+	_, applicationCommands := commandInventories()
+
+	for path, command := range applicationCommands {
+		if strings.TrimSpace(command.Long) == "" {
+			t.Errorf("%s has no long help", path)
+		}
+		for field, text := range map[string]string{"Long": command.Long, "Example": command.Example} {
+			for i, line := range strings.Split(text, "\n") {
+				if len(line) > 80 {
+					t.Errorf("%s %s line %d is %d columns, want at most 80: %q", path, field, i+1, len(line), line)
+				}
+			}
+		}
+	}
+}
