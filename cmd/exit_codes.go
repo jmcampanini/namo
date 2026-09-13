@@ -11,9 +11,9 @@ func newExitCodesCmd() *cobra.Command {
   0  Success. The requested names are on stdout, one per line, and
      stderr is empty. --help, --version, 'namo docs', 'namo help', and
      this topic also exit 0. 'namo help NAME' with a NAME that is not a
-     command prints the root help and exits 0, and 'namo completion'
-     with a missing or unknown shell prints the completion help and
-     exits 0.
+     command prints 'Unknown help topic' and the root usage on stderr
+     and exits 0, and 'namo completion' with a missing or unknown shell
+     prints the completion help and exits 0.
   1  Any failure. namo prints 'namo: error: <message>' on stderr and no
      usage text. Usage errors: an unknown command, operand, or flag, a
      --count that is not an integer, --prefix together with
