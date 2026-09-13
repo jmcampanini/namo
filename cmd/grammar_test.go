@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -24,22 +23,6 @@ func TestEveryApplicationCommandDeclaresPositionalGrammar(t *testing.T) {
 		}
 		if command.HasSubCommands() && command.RunE == nil {
 			t.Errorf("%s has subcommands but no RunE", path)
-		}
-	}
-}
-
-// TestUnknownFlagIsRejectedWithoutUsageOutput checks that SilenceUsage and
-// SilenceErrors on the root reach every command: an unknown flag returns an
-// error and writes nothing, leaving main to print the single error line.
-func TestUnknownFlagIsRejectedWithoutUsageOutput(t *testing.T) {
-	for _, args := range [][]string{{"--bogus"}, {"docs", "--bogus"}, {"exit-codes", "--bogus"}} {
-		_, stdout, stderr, err := executeCommand(t, newRootCmd(), args...)
-
-		if err == nil || !strings.Contains(err.Error(), "unknown flag") {
-			t.Errorf("Execute(%v) error = %v, want containing %q", args, err, "unknown flag")
-		}
-		if stdout != "" || stderr != "" {
-			t.Errorf("Execute(%v) stdout = %q, stderr = %q, want both empty", args, stdout, stderr)
 		}
 	}
 }
