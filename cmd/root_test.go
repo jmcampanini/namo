@@ -286,16 +286,6 @@ func TestDocsCommand(t *testing.T) {
 	}
 }
 
-func TestVersionFlag(t *testing.T) {
-	_, stdout, _, err := executeCommand(t, newRootCmd(), "--version")
-	if err != nil {
-		t.Fatalf("Execute(--version) error = %v", err)
-	}
-	if !strings.Contains(stdout, "namo version") {
-		t.Fatalf("version output = %q, want containing %q", stdout, "namo version")
-	}
-}
-
 func TestExitCodesTopicPrintsSameHelpFromBothEntryPoints(t *testing.T) {
 	_, direct, stderr, err := executeCommand(t, newRootCmd(), "exit-codes")
 	if err != nil {

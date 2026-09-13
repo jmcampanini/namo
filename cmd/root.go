@@ -62,10 +62,10 @@ through unchanged.
 
 Run 'namo docs' for stamp layout verbs, size details, and recipes, and
 'namo help exit-codes' for exit status meanings.`,
-		Version:       Version,
-		Args:          cobra.NoArgs,
-		SilenceUsage:  true,
-		SilenceErrors: true,
+		Version:            Version,
+		DisableSuggestions: true,
+		SilenceUsage:       true,
+		SilenceErrors:      true,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runRoot(cmd, flags)
 		},
@@ -81,6 +81,8 @@ Run 'namo docs' for stamp layout verbs, size details, and recipes, and
 	f.BoolVar(&flags.noStamp, "no-stamp", false, "omit the timestamp while retaining any prefix")
 	root.MarkFlagsMutuallyExclusive("stamp", "short-stamp", "no-stamp")
 	root.MarkFlagsMutuallyExclusive("prefix", "raw-prefix")
+	root.InitDefaultHelpFlag()
+	root.InitDefaultVersionFlag()
 
 	root.AddCommand(newDocsCmd(), newExitCodesCmd())
 
