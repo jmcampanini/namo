@@ -317,9 +317,9 @@ func TestExitCodesTopicPrintsSameHelpFromBothEntryPoints(t *testing.T) {
 }
 
 func TestEveryApplicationCommandHasWrappedLongHelp(t *testing.T) {
-	_, applicationCommands := commandInventories()
+	commands := applicationCommands(newRootCmd())
 
-	for path, command := range applicationCommands {
+	for path, command := range commands {
 		if strings.TrimSpace(command.Long) == "" {
 			t.Errorf("%s has no long help", path)
 		}
