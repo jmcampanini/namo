@@ -23,10 +23,13 @@ brew upgrade --fetch-HEAD namo
 
 ### From source
 
+Requires [mise](https://mise.jdx.dev), which installs the pinned Go toolchain from `mise.toml`.
+
 ```sh
 git clone https://github.com/jmcampanini/namo
 cd namo
-make build
+mise install
+mise run build
 ./build/namo --version
 ```
 

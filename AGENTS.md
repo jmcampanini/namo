@@ -1,12 +1,11 @@
 ## Build and validate
 
-- Use `make`; do not invoke `go build` / `go test` / `golangci-lint` directly.
-- Run `make help` to discover available tasks. Key tasks are:
-  - Run `make build` to compile to `build/namo` with version ldflags, `-trimpath`, and `-buildvcs=false`.
-  - Run `make test` to execute `go test -count=1 -race ./...`.
-  - Run `make check` to execute `fmt-check` + `tidy-check` + `lint` + `test` + `build` + `version-check` + `vuln`. **Run this before declaring work done.**
-- Checks are read-only: `make check` must leave the tracked tree unchanged and create nothing outside ignored paths. CI verifies this.
-- Tools run through pinned `go.mod` tool declarations via `go tool`; never rely on globally installed golangci-lint or govulncheck.
+- This repository uses mise for tool versions and task execution. Run tasks with `mise run <task>`; do not call `go`, `golangci-lint`, or similar tools directly.
+- Common tasks (`mise tasks` lists all of them):
+  - `mise run check` runs the complete verification contract. **Run this before declaring work done.**
+  - `mise run build` compiles `build/namo` with version ldflags.
+  - `mise run test` runs `go test -count=1 -race ./...`.
+  - `mise run fmt` and `mise run lint-fix` apply formatting and lint fixes.
 
 ## Conventions
 
@@ -16,4 +15,4 @@
 
 ## Before committing
 
-- Always run `make check`. It is the single source of truth for "this is ready".
+- Always run `mise run check`. It is the single source of truth for "this is ready".
