@@ -1,13 +1,11 @@
 ## Build and validate
 
-- Use `mise run`; do not invoke `go build` / `go test` / `golangci-lint` / `govulncheck` directly.
-- Run `mise tasks` to discover available tasks. Key tasks are:
-  - Run `mise run build` to compile to `build/namo` with version ldflags, `-trimpath`, and `-buildvcs=false`.
-  - Run `mise run test` to execute `go test -count=1 -race ./...`.
-  - Run `mise run check` to execute `fmt-check` + `tidy-check` + `lint` + `test` + `build` + `version-check` + `vuln`. **Run this before declaring work done.**
-- Checks are read-only: `mise run check` must leave the tracked tree unchanged and create nothing outside ignored paths. CI verifies this.
-- Tool versions are pinned in `mise.toml` and checksummed in `mise.lock`: Go, golangci-lint, and govulncheck all come from mise. Never rely on a globally installed Go toolchain, golangci-lint, or govulncheck. `GOTOOLCHAIN=local` is set so Go cannot swap in a different toolchain.
-- Bump tools with `mise upgrade --bump`, then commit `mise.toml` and `mise.lock` together. Raise the `go` directive in `go.mod` separately, only when the code needs a newer language version.
+- This repository uses mise for tool versions and task execution. Run tasks with `mise run <task>`; do not call `go`, `golangci-lint`, or similar tools directly.
+- Common tasks (`mise tasks` lists all of them):
+  - `mise run check` runs the complete verification contract. **Run this before declaring work done.**
+  - `mise run build` compiles `build/namo` with version ldflags.
+  - `mise run test` runs `go test -count=1 -race ./...`.
+  - `mise run fmt` and `mise run lint-fix` apply formatting and lint fixes.
 
 ## Conventions
 
