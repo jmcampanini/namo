@@ -6,32 +6,16 @@ Command help is the canonical reference: `namo --help` describes every flag, the
 
 ## Install
 
-namo distributes from HEAD only; there is no release channel or tagged binary.
-
-### Homebrew
+Releases ship binaries for Linux (amd64, arm64) and macOS on Apple Silicon.
 
 ```sh
-brew tap jmcampanini/namo https://github.com/jmcampanini/namo
-brew install --HEAD jmcampanini/namo/namo
+mise use -g github:jmcampanini/namo   # mise
+brew install jmcampanini/tap/namo     # Homebrew
 ```
 
-Upgrade to the latest commit:
+Or download an archive from the [releases page](https://github.com/jmcampanini/namo/releases) and put `namo` on your `PATH`. Each release includes a SHA-256 checksums file and GitHub build provenance attestations. On macOS, a browser download needs `xattr -d com.apple.quarantine namo` before it runs; mise, Homebrew, `curl`, and `gh` downloads do not.
 
-```sh
-brew upgrade --fetch-HEAD namo
-```
-
-### From source
-
-Requires [mise](https://mise.jdx.dev), which installs the pinned Go toolchain from `mise.toml`.
-
-```sh
-git clone https://github.com/jmcampanini/namo
-cd namo
-mise install
-mise run build
-./build/namo --version
-```
+To build from source, install [mise](https://mise.jdx.dev) and run `mise install` then `mise run build`; copy `./build/namo` onto your `PATH`.
 
 ## Representative commands
 

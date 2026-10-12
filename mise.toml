@@ -7,6 +7,7 @@ lockfile_platforms = ["linux-x64", "macos-arm64"]
 [tools]
 go = "1.27.1"
 golangci-lint = "2.13.0"
+goreleaser = "2.18.3"
 "go:golang.org/x/vuln/cmd/govulncheck" = "1.6.0"
 
 [env]
@@ -76,6 +77,25 @@ run = "govulncheck ./..."
 [tasks.check]
 description = "Run the complete local verification contract."
 depends = ["fmt-check", "tidy-check", "lint", "test", "version-check", "vuln"]
+
+[tasks.release-snapshot]
+description = "Build release archives into dist/ with GoReleaser without publishing."
+run = [
+  "goreleaser check",
+  "goreleaser release --snapshot --clean",
+]
+
+# release publishes: it creates the GitHub Release and pushes the Homebrew
+# cask. Only the Release workflow runs it, on a v* tag.
+[tasks.release]
+description = "Build and publish the release for the checked-out tag (Release workflow only)."
+run = """
+if [ "${GITHUB_ACTIONS:-}" != "true" ]; then
+  echo "release publishes artifacts and must run from the Release workflow; use 'mise run release-snapshot' locally"
+  exit 1
+fi
+goreleaser release --clean
+"""
 
 [tasks.clean]
 description = "Remove build artifacts and the Go test cache."
