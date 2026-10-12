@@ -6,6 +6,7 @@
   - `mise run build` compiles `build/namo` with version ldflags.
   - `mise run test` runs `go test -count=1 -race ./...`.
   - `mise run fmt` and `mise run lint-fix` apply formatting and lint fixes.
+  - `mise run release-snapshot` builds the release archives into `dist/` without publishing; `mise run release` publishes and only runs in the Release workflow on a `v*` tag.
 
 ## Conventions
 
