@@ -6,7 +6,7 @@ Command help is the canonical reference: `namo --help` describes every flag, the
 
 ## Install
 
-Releases ship binaries for Linux (amd64, arm64) and macOS on Apple Silicon.
+Releases ship binaries for Linux and macOS on amd64 and arm64.
 
 ```sh
 mise use -g github:jmcampanini/namo   # mise
