@@ -10,10 +10,12 @@ Releases ship binaries for Linux and macOS on amd64 and arm64.
 
 ```sh
 mise use -g github:jmcampanini/namo   # mise
+mise upgrade github:jmcampanini/namo # mise upgrade
 brew install jmcampanini/tap/namo     # Homebrew
+brew upgrade jmcampanini/tap/namo     # Homebrew upgrade
 ```
 
-Or download an archive from the [releases page](https://github.com/jmcampanini/namo/releases) and put `namo` on your `PATH`. Each release includes a SHA-256 checksums file and GitHub build provenance attestations. On macOS, a browser download needs `xattr -d com.apple.quarantine namo` before it runs; mise, Homebrew, `curl`, and `gh` downloads do not.
+Or download an archive from the [releases page](https://github.com/jmcampanini/namo/releases) and put `namo` on your `PATH`; to upgrade, download the new release and replace the binary. Each release includes a SHA-256 checksums file and GitHub build provenance attestations. On macOS, a browser download needs `xattr -d com.apple.quarantine namo` before it runs; mise, Homebrew, `curl`, and `gh` downloads do not.
 
 To build from source, install [mise](https://mise.jdx.dev) and run `mise install` then `mise run build`; copy `./build/namo` onto your `PATH`.
 
