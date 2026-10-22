@@ -74,14 +74,15 @@ homebrew_casks:
         url: ssh://git@github.com/jmcampanini/homebrew-tap.git
         private_key: "{{ envOrDefault \"HOMEBREW_TAP_DEPLOY_KEY\" \"\" }}"
     hooks:
-      post:
+      pre:
         # The binary is not notarized. Homebrew quarantines cask downloads,
-        # so remove the attribute or Gatekeeper refuses to run the binary.
+        # so remove the attribute before Homebrew runs completion generation.
+        # Homebrew runs completion generation before postflight hooks.
         install: |
           if OS.mac?
             system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/namo"]
           end
-    # Runs `namo completion <shell>` at install time, after the postflight
+    # Runs `namo completion <shell>` at install time, after the preflight
     # hook above. Same shells as the Homebrew default for a formula.
     generate_completions_from_executable:
       executable: namo
