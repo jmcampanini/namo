@@ -2,6 +2,7 @@
 
 namo generates memorable, sortable names of the form `[prefix-][stamp-]slug`, like `debug-output-260711154501-star-studded-booze-cruise`. The stamp is the local time (`yymmddhhmmss` by default), so names sort by creation time; the slug is random words from [hotdiva2000](https://github.com/charmbracelet/hotdiva2000), so a name is easy to recognize in a directory listing or a log. Typical uses are scratch files, log files, branch names, and batches of seed identifiers. Without `--raw-prefix` or a custom `--stamp`, each name is one line of lowercase ASCII letters, digits, and hyphens, safe in command substitution and file paths. namo never prompts, runs no external program, and never accesses the network.
 
+
 ## Install
 
 Releases ship binaries for Linux and macOS on amd64 and arm64.
@@ -26,6 +27,7 @@ mise run build
 ```
 
 Copy `./build/namo` onto your `PATH`.
+
 
 ## Representative commands
 
