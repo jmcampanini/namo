@@ -4,6 +4,7 @@ namo generates memorable, sortable names of the form `[prefix-][stamp-]slug`, li
 
 Command help is the canonical reference: `namo --help` describes every flag, the output contract, and the safety guarantees, `namo help exit-codes` describes exit statuses, and `namo docs` prints the longer manual with stamp layout verbs, size details, and recipes.
 
+
 ## Install
 
 Releases ship binaries for Linux and macOS on amd64 and arm64.
@@ -18,6 +19,7 @@ brew upgrade jmcampanini/tap/namo     # Homebrew upgrade
 Or download an archive from the [releases page](https://github.com/jmcampanini/namo/releases) and put `namo` on your `PATH`; to upgrade, download the new release and replace the binary. Each release includes a SHA-256 checksums file and GitHub build provenance attestations. On macOS, a browser download needs `xattr -d com.apple.quarantine namo` before it runs; mise, Homebrew, `curl`, and `gh` downloads do not.
 
 To build from source, install [mise](https://mise.jdx.dev) and run `mise install` then `mise run build`; copy `./build/namo` onto your `PATH`.
+
 
 ## Representative commands
 
@@ -46,9 +48,11 @@ Without `--raw-prefix` or a custom `--stamp`, each name is one line of lowercase
 filename=".sandbox/$(namo -p debug-output).log"
 ```
 
+
 ## Required external programs
 
 None. namo runs on its own and never accesses the network.
+
 
 ## Configuration
 
