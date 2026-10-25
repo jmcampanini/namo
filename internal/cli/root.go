@@ -1,5 +1,5 @@
-// Package cmd wires the cobra commands for the namo binary.
-package cmd
+// Package cli wires the cobra commands for the namo binary.
+package cli
 
 import (
 	"fmt"
