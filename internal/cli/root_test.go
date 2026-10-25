@@ -1,29 +1,13 @@
-package cmd
+package cli
 
 import (
-	"bytes"
 	"regexp"
 	"strconv"
 	"strings"
 	"testing"
-
-	"github.com/spf13/cobra"
 )
 
 const slugPattern = `[a-z0-9]+(-[a-z0-9]+)*`
-
-func executeCommand(t *testing.T, root *cobra.Command, args ...string) (*cobra.Command, string, string, error) {
-	t.Helper()
-	if args == nil {
-		args = []string{}
-	}
-	var stdout, stderr bytes.Buffer
-	root.SetOut(&stdout)
-	root.SetErr(&stderr)
-	root.SetArgs(args)
-	command, err := root.ExecuteC()
-	return command, stdout.String(), stderr.String(), err
-}
 
 func TestRootCommand(t *testing.T) {
 	tests := []struct {
@@ -264,44 +248,6 @@ func TestHelpIncludesPrefixModes(t *testing.T) {
 	for _, want := range []string{"--prefix", "ASCII-normalized", "--raw-prefix", "unsafe", "non-empty", "joining hyphen", "empty omits the prefix", "1 <= count <= 100", "trusted custom"} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("Execute(--help) output does not contain %q:\n%s", want, stdout)
-		}
-	}
-}
-
-func TestDocsCommand(t *testing.T) {
-	_, stdout, stderr, err := executeCommand(t, newRootCmd(), "docs")
-	if err != nil {
-		t.Fatalf("Execute(docs) error = %v", err)
-	}
-	if stdout != manual {
-		t.Fatalf("Execute(docs) output does not match embedded manual")
-	}
-	for _, want := range []string{"[prefix-][stamp-]slug", "Omit the timestamp while retaining any prefix", "non-empty raw prefix", "empty raw prefix behaves as no prefix", "1 <= count <= 100", "custom --stamp is also trusted input"} {
-		if !strings.Contains(stdout, want) {
-			t.Fatalf("Execute(docs) output does not contain %q", want)
-		}
-	}
-	if stderr != "" {
-		t.Fatalf("Execute(docs) stderr = %q, want empty", stderr)
-	}
-}
-
-func TestExitCodesTopicPrintsSameHelpFromBothEntryPoints(t *testing.T) {
-	_, direct, stderr, err := executeCommand(t, newRootCmd(), "exit-codes")
-	if err != nil {
-		t.Fatalf("Execute(exit-codes) error = %v, stderr = %s", err, stderr)
-	}
-	_, viaHelp, stderr, err := executeCommand(t, newRootCmd(), "help", "exit-codes")
-	if err != nil {
-		t.Fatalf("Execute(help exit-codes) error = %v, stderr = %s", err, stderr)
-	}
-
-	if direct != viaHelp {
-		t.Fatalf("exit-codes output differs between entry points:\n%s\n---\n%s", direct, viaHelp)
-	}
-	for _, want := range []string{"\n  0  ", "\n  1  ", "namo: error:"} {
-		if !strings.Contains(direct, want) {
-			t.Fatalf("exit-codes help missing %q:\n%s", want, direct)
 		}
 	}
 }
