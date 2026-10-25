@@ -3,6 +3,7 @@ package cli
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 
@@ -19,9 +20,18 @@ type rootFlags struct {
 	stamp      string
 }
 
-// Execute parses the command line and runs the requested command.
-func Execute() error {
-	return newRootCmd().Execute()
+// Version is set at build time via -ldflags.
+var Version = "n/a"
+
+// Execute parses the command line, runs the requested command, and returns
+// the process exit status: 0 on success, 1 after printing
+// "namo: error: <message>" to stderr.
+func Execute() int {
+	if err := newRootCmd().Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, "namo: error:", err)
+		return 1
+	}
+	return 0
 }
 
 func newRootCmd() *cobra.Command {

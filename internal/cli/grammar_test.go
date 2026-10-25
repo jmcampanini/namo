@@ -1,10 +1,6 @@
 package cli
 
-import (
-	"testing"
-
-	"github.com/spf13/cobra"
-)
+import "testing"
 
 // TestEveryApplicationCommandDeclaresPositionalGrammar requires an Args
 // validator on every application-owned command other than the root and a
@@ -23,25 +19,4 @@ func TestEveryApplicationCommandDeclaresPositionalGrammar(t *testing.T) {
 			t.Errorf("%s has subcommands but no RunE", path)
 		}
 	}
-}
-
-// applicationCommands maps command paths to every command in root's tree
-// except Cobra's built-in help and completion commands.
-func applicationCommands(root *cobra.Command) map[string]*cobra.Command {
-	root.InitDefaultHelpCmd()
-	root.InitDefaultCompletionCmd()
-
-	commands := map[string]*cobra.Command{root.CommandPath(): root}
-	var walk func(*cobra.Command)
-	walk = func(command *cobra.Command) {
-		for _, child := range command.Commands() {
-			if child.Name() == "help" || child.Name() == "completion" {
-				continue
-			}
-			commands[child.CommandPath()] = child
-			walk(child)
-		}
-	}
-	walk(root)
-	return commands
 }
