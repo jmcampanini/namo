@@ -48,6 +48,4 @@ $ namo -n 3 -s short
 260711154501-business-school
 ```
 
-A typical use names a file in one line: `filename=".sandbox/$(namo -p debug-output).log"`.
-
-The canonical reference is `namo --help`, each command's `--help`, and the help topics: `namo help exit-codes` for exit statuses and `namo docs` for the longer manual with stamp layout verbs, size details, and recipes.
+The canonical reference is `namo --help`, each command's `--help`, and the help topic `namo help exit-codes`; `namo docs` prints the longer manual with stamp layout verbs, size details, and recipes.
