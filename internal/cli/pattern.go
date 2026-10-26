@@ -28,7 +28,6 @@ Slug sizes:
   long      a word always added at each end, e.g.
             his-majestys-for-pay-game-dev-part-2
 
-Without a raw prefix or a custom stamp layout, a name is one line of
-lowercase ASCII letters, digits, and hyphens, safe inside "$(namo ...)"
-and in file paths. 'namo --help' lists the flags that set each part.`)
+'namo --help' lists the flags that set each part and states when a name
+is safe in command substitution and file paths.`)
 }

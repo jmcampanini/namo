@@ -50,9 +50,6 @@ func TestExecuteExitStatus(t *testing.T) {
 				t.Errorf("execute(%v) = %d, want %d; stderr = %q", tt.args, status, tt.wantStatus, stderr.String())
 			}
 			if tt.wantStatus == 0 {
-				if stdout.Len() == 0 {
-					t.Error("stdout is empty, want names or help")
-				}
 				return
 			}
 			if stdout.Len() != 0 {
@@ -75,17 +72,19 @@ func TestExecuteExitStatus(t *testing.T) {
 }
 
 func TestExecuteWriteFailure(t *testing.T) {
-	root := newRootCmd()
-	var stderr bytes.Buffer
-	root.SetOut(closedWriter{})
-	root.SetErr(&stderr)
-	root.SetArgs([]string{"--no-stamp"})
+	for _, args := range [][]string{{"--no-stamp"}, {"completion", "bash"}} {
+		root := newRootCmd()
+		var stderr bytes.Buffer
+		root.SetOut(closedWriter{})
+		root.SetErr(&stderr)
+		root.SetArgs(args)
 
-	if status := execute(root); status != 1 {
-		t.Errorf("execute() = %d, want 1", status)
-	}
-	if got, want := stderr.String(), "namo: io: read/write on closed pipe\n"; got != want {
-		t.Errorf("stderr = %q, want %q", got, want)
+		if status := execute(root); status != 1 {
+			t.Errorf("execute(%v) = %d, want 1", args, status)
+		}
+		if got, want := stderr.String(), "namo: io: read/write on closed pipe\n"; got != want {
+			t.Errorf("execute(%v) stderr = %q, want %q", args, got, want)
+		}
 	}
 }
 

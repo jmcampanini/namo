@@ -30,7 +30,7 @@ func TestEveryApplicationCommandDeclaresPositionalGrammar(t *testing.T) {
 		if !command.Runnable() {
 			t.Errorf("%s is a command group or help topic but is not runnable", path)
 		}
-		if command.Args == nil || reflect.ValueOf(command.Args).Pointer() != noArgs {
+		if reflect.ValueOf(command.Args).Pointer() != noArgs {
 			t.Errorf("%s is a command group or help topic but its Args is not cobra.NoArgs", path)
 		}
 	}

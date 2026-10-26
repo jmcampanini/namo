@@ -2,7 +2,6 @@
 package cli
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -25,48 +24,43 @@ type rootFlags struct {
 var Version = "n/a"
 
 // Execute parses the command line, runs the requested command, and returns
-// the process exit status: 0 on success, 1 when a command's runner fails,
-// and 2 on a usage error the command library rejects before any runner. A
-// failure prints one line, "namo: <message>", to stderr.
+// the process exit status: 0 on success, 2 on a usage error the command
+// library rejects before the invocation is accepted, and 1 on every other
+// failure. A failure prints one line, "namo: <message>", to stderr.
 func Execute() int {
 	return execute(newRootCmd())
 }
 
 // execute runs root with the arguments and streams set on it and returns the
-// exit status. A line break inside a message is shown as \n so the
-// diagnostic stays one line.
+// exit status. The root's persistent pre-run hook records that the command
+// library accepted the invocation; an error before it is a usage error and
+// an error after it, from any runner including the library's own, is a
+// command failure. A line break or carriage return inside a message is
+// shown as \n or \r so the diagnostic stays one line.
 func execute(root *cobra.Command) int {
+	accepted := false
+	root.PersistentPreRunE = func(cmd *cobra.Command, _ []string) error {
+		// Cobra checks required flags and flag groups after this hook, so
+		// check them here to keep those failures usage errors.
+		if err := cmd.ValidateRequiredFlags(); err != nil {
+			return err
+		}
+		if err := cmd.ValidateFlagGroups(); err != nil {
+			return err
+		}
+		accepted = true
+		return nil
+	}
 	err := root.Execute()
 	if err == nil {
 		return 0
 	}
 	message := strings.NewReplacer("\r", `\r`, "\n", `\n`).Replace(err.Error())
 	_, _ = fmt.Fprintf(root.ErrOrStderr(), "namo: %s\n", message)
-	var failure *runError
-	if errors.As(err, &failure) {
+	if accepted {
 		return 1
 	}
 	return 2
-}
-
-// runError marks a failure a command's runner returned, so execute can tell
-// it from the usage errors the command library returns before any runner.
-type runError struct {
-	err error
-}
-
-func (e *runError) Error() string { return e.err.Error() }
-
-func (e *runError) Unwrap() error { return e.err }
-
-// run wraps a runner so every error it returns is a runError.
-func run(runner func(cmd *cobra.Command, args []string) error) func(cmd *cobra.Command, args []string) error {
-	return func(cmd *cobra.Command, args []string) error {
-		if err := runner(cmd, args); err != nil {
-			return &runError{err: err}
-		}
-		return nil
-	}
 }
 
 func newRootCmd() *cobra.Command {
@@ -135,9 +129,9 @@ Help topics:
 		DisableSuggestions: true,
 		SilenceUsage:       true,
 		SilenceErrors:      true,
-		RunE: run(func(cmd *cobra.Command, _ []string) error {
+		RunE: func(cmd *cobra.Command, _ []string) error {
 			return runRoot(cmd, flags)
-		}),
+		},
 	}
 
 	f := root.Flags()

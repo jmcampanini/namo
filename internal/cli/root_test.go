@@ -238,7 +238,7 @@ func TestRootCommandBatchSharesStamp(t *testing.T) {
 	}
 }
 
-func TestHelpIncludesPrefixModes(t *testing.T) {
+func TestRootHelpNamesFlagsAndTopics(t *testing.T) {
 	_, stdout, stderr, err := executeCommand(t, newRootCmd(), "--help")
 	if err != nil {
 		t.Fatalf("Execute(--help) error = %v", err)
@@ -255,11 +255,13 @@ func TestHelpIncludesPrefixModes(t *testing.T) {
 
 // TestEveryApplicationCommandMeetsHelpBaseline walks a freshly constructed
 // tree and fails on a missing short help, a missing long description, a
-// rendered help line over 80 columns, or a help topic whose direct
-// invocation prints text other than its help.
+// rendered help line over 80 columns, a help topic whose direct invocation
+// prints text other than its help, or a help topic the root long
+// description does not list.
 func TestEveryApplicationCommandMeetsHelpBaseline(t *testing.T) {
+	root := newRootCmd()
 	topics := 0
-	for path, command := range applicationCommands(newRootCmd()) {
+	for path, command := range applicationCommands(root) {
 		if isHelpTopic(command) {
 			topics++
 		}
@@ -283,6 +285,9 @@ func TestEveryApplicationCommandMeetsHelpBaseline(t *testing.T) {
 			}
 			if !isHelpTopic(command) {
 				return
+			}
+			if invocation := "namo help " + command.Name(); !strings.Contains(root.Long, invocation) {
+				t.Errorf("root long description does not list %q", invocation)
 			}
 
 			for _, invocation := range [][]string{args, append([]string{"help"}, args...)} {
