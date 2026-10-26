@@ -26,7 +26,7 @@ mise install
 mise run build
 ```
 
-Copy `./build/namo` onto your `PATH`.
+Copy `./build/namo` onto your `PATH`. To upgrade, run `git pull`, `mise install`, and `mise run build` in the clone, then copy the binary again.
 
 
 ## Representative commands
