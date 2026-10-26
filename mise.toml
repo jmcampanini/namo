@@ -5,9 +5,9 @@ lockfile = true
 lockfile_platforms = ["linux-x64", "macos-arm64"]
 
 [tools]
-go = "1.27.1"
-golangci-lint = "2.13.0"
-goreleaser = "2.18.3"
+go = "1.27.3"
+golangci-lint = "2.15.0"
+goreleaser = "2.19.0"
 "go:golang.org/x/vuln/cmd/govulncheck" = "1.6.0"
 node = "24.21.0"
 "npm:markdownlint-cli2" = "0.24.0"
@@ -87,12 +87,12 @@ run = [
   "goreleaser release --snapshot --clean",
 ]
 
-# release publishes: it creates the GitHub Release and pushes the Homebrew cask. Only the Release workflow runs it, on a v* tag.
+# release publishes: it creates the GitHub Release and pushes the Homebrew cask. Only the Release workflow runs it, on a version tag.
 [tasks.release]
 description = "Build and publish the release for the checked-out tag (Release workflow only)."
 run = """
-if [ "${GITHUB_ACTIONS:-}" != "true" ]; then
-  echo "release publishes artifacts and must run from the Release workflow; use 'mise run release-snapshot' locally"
+if [ "${GITHUB_ACTIONS:-}" != "true" ] || [ "${GITHUB_WORKFLOW:-}" != "Release" ] || [ "${GITHUB_REF_TYPE:-}" != "tag" ]; then
+  echo "release publishes artifacts and runs only from the Release workflow on a tag; use 'mise run release-snapshot' locally"
   exit 1
 fi
 goreleaser release --clean
