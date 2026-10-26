@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 const slugPattern = `[a-z0-9]+(-[a-z0-9]+)*`
@@ -237,7 +238,7 @@ func TestRootCommandBatchSharesStamp(t *testing.T) {
 	}
 }
 
-func TestHelpIncludesPrefixModes(t *testing.T) {
+func TestRootHelpNamesFlagsAndTopics(t *testing.T) {
 	_, stdout, stderr, err := executeCommand(t, newRootCmd(), "--help")
 	if err != nil {
 		t.Fatalf("Execute(--help) error = %v", err)
@@ -245,26 +246,62 @@ func TestHelpIncludesPrefixModes(t *testing.T) {
 	if stderr != "" {
 		t.Fatalf("Execute(--help) stderr = %q, want empty", stderr)
 	}
-	for _, want := range []string{"--prefix", "ASCII-normalized", "--raw-prefix", "unsafe", "non-empty", "joining hyphen", "empty omits the prefix", "1 <= count <= 100", "trusted custom"} {
+	for _, want := range []string{"--prefix", "normalized to lowercase ASCII words", "--raw-prefix", "passed through as given", "trusted input", "1 to 100", "strftime-style stamp layout", "Help topics:", "namo help exit-codes"} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("Execute(--help) output does not contain %q:\n%s", want, stdout)
 		}
 	}
 }
 
-func TestEveryApplicationCommandHasWrappedLongHelp(t *testing.T) {
-	commands := applicationCommands(newRootCmd())
-
-	for path, command := range commands {
-		if strings.TrimSpace(command.Long) == "" {
-			t.Errorf("%s has no long help", path)
+// TestEveryApplicationCommandMeetsHelpBaseline walks a freshly constructed
+// tree and fails on a missing short help, a missing long description, a
+// rendered help line over 80 columns, a help topic whose direct invocation
+// prints text other than its help, or a help topic the root long
+// description does not list.
+func TestEveryApplicationCommandMeetsHelpBaseline(t *testing.T) {
+	root := newRootCmd()
+	topics := 0
+	for path, command := range applicationCommands(root) {
+		if isHelpTopic(command) {
+			topics++
 		}
-		for field, text := range map[string]string{"Long": command.Long, "Example": command.Example} {
-			for i, line := range strings.Split(text, "\n") {
-				if len(line) > 80 {
-					t.Errorf("%s %s line %d is %d columns, want at most 80: %q", path, field, i+1, len(line), line)
+		t.Run(path, func(t *testing.T) {
+			if strings.TrimSpace(command.Short) == "" {
+				t.Error("missing short help")
+			}
+			if strings.TrimSpace(command.Long) == "" {
+				t.Error("missing long description")
+			}
+
+			args := strings.Fields(path)[1:]
+			_, help, stderr, err := executeCommand(t, newRootCmd(), append(args, "--help")...)
+			if err != nil || stderr != "" {
+				t.Fatalf("Execute(%v --help) error = %v, stderr = %q", args, err, stderr)
+			}
+			for i, line := range strings.Split(help, "\n") {
+				if width := utf8.RuneCountInString(line); width > 80 {
+					t.Errorf("help line %d is %d columns, want at most 80: %q", i+1, width, line)
 				}
 			}
-		}
+			if !isHelpTopic(command) {
+				return
+			}
+			if invocation := "namo help " + command.Name(); !strings.Contains(root.Long, invocation) {
+				t.Errorf("root long description does not list %q", invocation)
+			}
+
+			for _, invocation := range [][]string{args, append([]string{"help"}, args...)} {
+				_, stdout, stderr, err := executeCommand(t, newRootCmd(), invocation...)
+				if err != nil || stderr != "" {
+					t.Fatalf("Execute(%v) error = %v, stderr = %q", invocation, err, stderr)
+				}
+				if stdout != help {
+					t.Errorf("Execute(%v) output differs from its help:\n%s\n---\n%s", invocation, stdout, help)
+				}
+			}
+		})
+	}
+	if topics == 0 {
+		t.Error("found no help topic; the exit-codes topic is required")
 	}
 }

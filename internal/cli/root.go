@@ -3,7 +3,7 @@ package cli
 
 import (
 	"fmt"
-	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -24,14 +24,43 @@ type rootFlags struct {
 var Version = "n/a"
 
 // Execute parses the command line, runs the requested command, and returns
-// the process exit status: 0 on success, 1 after printing
-// "namo: error: <message>" to stderr.
+// the process exit status: 0 on success, 2 on a usage error the command
+// library rejects before the invocation is accepted, and 1 on every other
+// failure. A failure prints one line, "namo: <message>", to stderr.
 func Execute() int {
-	if err := newRootCmd().Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, "namo: error:", err)
+	return execute(newRootCmd())
+}
+
+// execute runs root with the arguments and streams set on it and returns the
+// exit status. The root's persistent pre-run hook records that the command
+// library accepted the invocation; an error before it is a usage error and
+// an error after it, from any runner including the library's own, is a
+// command failure. A line break or carriage return inside a message is
+// shown as \n or \r so the diagnostic stays one line.
+func execute(root *cobra.Command) int {
+	accepted := false
+	root.PersistentPreRunE = func(cmd *cobra.Command, _ []string) error {
+		// Cobra checks required flags and flag groups after this hook, so
+		// check them here to keep those failures usage errors.
+		if err := cmd.ValidateRequiredFlags(); err != nil {
+			return err
+		}
+		if err := cmd.ValidateFlagGroups(); err != nil {
+			return err
+		}
+		accepted = true
+		return nil
+	}
+	err := root.Execute()
+	if err == nil {
+		return 0
+	}
+	message := strings.NewReplacer("\r", `\r`, "\n", `\n`).Replace(err.Error())
+	_, _ = fmt.Fprintf(root.ErrOrStderr(), "namo: %s\n", message)
+	if accepted {
 		return 1
 	}
-	return 0
+	return 2
 }
 
 func newRootCmd() *cobra.Command {
@@ -51,27 +80,51 @@ becomes one hyphen, edge hyphens are dropped, and a value with no ASCII
 letter or digit is an error. --raw-prefix TEXT adds the bytes exactly as
 given followed by one hyphen; an empty value adds nothing. -n/--count N
 prints N names, 1 to 100, that share one stamp and repeat no slug.
--s/--size short|standard|long sets slug length: short is a modifier and a
-noun, standard sometimes adds a word at either end, long always adds one
-at each end. --stamp LAYOUT renders a strftime-style layout with %Y %y %m
-%d %H %M %S and %%, --short-stamp is --stamp %H%M, and --no-stamp omits
-the stamp and keeps any prefix. --prefix and --raw-prefix are mutually
-exclusive, as are --stamp, --short-stamp, and --no-stamp.
+-s/--size short|standard|long sets slug length. --stamp LAYOUT renders a
+strftime-style layout, --short-stamp is --stamp %H%M, and --no-stamp
+omits the stamp and keeps any prefix. --prefix and --raw-prefix are
+mutually exclusive, as are --stamp, --short-stamp, and --no-stamp.
 
-namo has no configuration file, reads nothing from stdin, and takes every
-option as a flag. The stamp follows the local time zone.
+namo has no configuration file, reads no files, writes no files, and
+reads nothing from stdin; every option is a flag. The stamp follows the
+local time zone.
 
-Names go to stdout, one per line; help and version output go to stdout
-too. Errors go to stderr as 'namo: error: <message>' with no usage text.
-namo never prompts, runs no external program, and never accesses the
-network. Without --raw-prefix or a custom --stamp, every name consists
-only of lowercase ASCII letters, digits, and hyphens, so it is safe inside
-"$(namo ...)" and in file paths. --raw-prefix and --stamp are trusted
-input: line breaks, control bytes, and path separators in them pass
-through unchanged.
+Names go to stdout, one per line, and that plain text is the only output
+format; help and version output go to stdout too. A failure prints one
+line on stderr, 'namo: <message>', with no usage text. namo never
+prompts, works without a terminal, runs no external program, and never
+accesses the network. Without --raw-prefix or a custom --stamp, every
+name consists only of lowercase ASCII letters, digits, and hyphens, so
+it is safe inside "$(namo ...)" and in file paths. --raw-prefix and
+--stamp are trusted input: line breaks, control bytes, and path
+separators in them pass through unchanged.
 
-Run 'namo docs' for stamp layout verbs, size details, and recipes, and
-'namo help exit-codes' for exit status meanings.`,
+Help topics:
+  pattern     The name parts and slug sizes:      namo help pattern
+  stamps      Stamp layout verbs and rendering:   namo help stamps
+  exit-codes  Exit statuses and the stderr line:  namo help exit-codes`,
+		Example: `  # Sortable log or scratch file
+  log=".sandbox/$(namo -p fish-profile).log"
+
+  # Family of output files sharing one run prefix
+  prefix="$(namo)"
+  response="out/${prefix}-response.md"
+  meta="out/${prefix}-meta.json"
+
+  # Branch or session handle with no stamp
+  git switch -c "spike/$(namo --no-stamp -s short)"
+
+  # Ephemeral name that only needs to be unique today
+  namo --short-stamp
+
+  # Batch of seed identifiers
+  namo -n 25 --no-stamp
+
+  # Prefix normalized to lowercase ASCII words
+  namo -p "Debug Output / API"
+
+  # Prefix passed through as given
+  namo --raw-prefix Build_42`,
 		Version:            Version,
 		DisableSuggestions: true,
 		SilenceUsage:       true,
@@ -82,19 +135,19 @@ Run 'namo docs' for stamp layout verbs, size details, and recipes, and
 	}
 
 	f := root.Flags()
-	f.StringVarP(&flags.prefix, "prefix", "p", "", "ASCII-normalized prefix joined by a hyphen; mutually exclusive with --raw-prefix")
-	f.StringVar(&flags.rawPrefix, "raw-prefix", "", "unsafe trusted prefix: non-empty input is preserved before a joining hyphen; empty omits the prefix; mutually exclusive with --prefix")
-	f.IntVarP(&flags.count, "count", "n", 1, "number of names to generate (1 <= count <= 100; one timestamp, unique slugs)")
-	f.StringVarP(&flags.size, "size", "s", string(namegen.SizeStandard), "slug size: short, standard, or long")
-	f.StringVar(&flags.stamp, "stamp", namegen.DefaultStampLayout, "trusted custom strftime layout; preserved literals can make output unsafe (%Y %y %m %d %H %M %S)")
-	f.BoolVar(&flags.shortStamp, "short-stamp", false, "use an HHMM timestamp for ephemeral names (--stamp %H%M)")
-	f.BoolVar(&flags.noStamp, "no-stamp", false, "omit the timestamp while retaining any prefix")
+	f.StringVarP(&flags.prefix, "prefix", "p", "", "prefix, normalized to lowercase ASCII words")
+	f.StringVar(&flags.rawPrefix, "raw-prefix", "", "prefix passed through as given (trusted input)")
+	f.IntVarP(&flags.count, "count", "n", 1, "number of names, 1 to 100")
+	f.StringVarP(&flags.size, "size", "s", string(namegen.SizeStandard), "slug size: short|standard|long")
+	f.StringVar(&flags.stamp, "stamp", namegen.DefaultStampLayout, "strftime-style stamp layout")
+	f.BoolVar(&flags.shortStamp, "short-stamp", false, "use an HHMM stamp (--stamp %H%M)")
+	f.BoolVar(&flags.noStamp, "no-stamp", false, "omit the stamp and keep any prefix")
 	root.MarkFlagsMutuallyExclusive("stamp", "short-stamp", "no-stamp")
 	root.MarkFlagsMutuallyExclusive("prefix", "raw-prefix")
 	root.InitDefaultHelpFlag()
 	root.InitDefaultVersionFlag()
 
-	root.AddCommand(newDocsCmd(), newExitCodesCmd())
+	root.AddCommand(newPatternCmd(), newStampsCmd(), newExitCodesCmd())
 
 	return root
 }

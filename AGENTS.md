@@ -7,5 +7,4 @@
 
 ## Conventions
 
-- Keep `internal/cli/manual.txt` in sync when changing CLI behavior or flags.
 - Keep command help the canonical user-facing documentation and the README a landing page; keep both consistent with observable behavior.

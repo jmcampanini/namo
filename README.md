@@ -50,4 +50,4 @@ $ namo -n 3 -s short
 260711154501-business-school
 ```
 
-The canonical reference is `namo --help`, each command's `--help`, and the help topic `namo help exit-codes`; `namo docs` prints the longer manual with stamp layout verbs, size details, and recipes.
+The canonical reference is `namo --help`, with recipes under Examples, and the help topics `namo help pattern`, `namo help stamps`, and `namo help exit-codes`.
