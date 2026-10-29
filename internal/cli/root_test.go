@@ -6,6 +6,8 @@ import (
 	"strings"
 	"testing"
 	"unicode/utf8"
+
+	"github.com/spf13/cobra"
 )
 
 const slugPattern = `[a-z0-9]+(-[a-z0-9]+)*`
@@ -246,18 +248,100 @@ func TestRootHelpNamesFlagsAndTopics(t *testing.T) {
 	if stderr != "" {
 		t.Fatalf("Execute(--help) stderr = %q, want empty", stderr)
 	}
-	for _, want := range []string{"--prefix", "normalized to lowercase ASCII words", "--raw-prefix", "passed through as given", "trusted input", "1 to 100", "strftime-style stamp layout", "Help topics:", "namo help exit-codes"} {
+	for _, want := range []string{"--prefix", "normalized to lowercase ASCII words", "--raw-prefix", "passed through as given", "trusted input", "1 to 100", "strftime-style stamp layout", "--version"} {
 		if !strings.Contains(stdout, want) {
 			t.Fatalf("Execute(--help) output does not contain %q:\n%s", want, stdout)
 		}
 	}
 }
 
+// TestRootHelpListsHelpTopicsApartFromCommands requires generated root help
+// to list every help topic under Help topics and every other command under
+// Commands, with no command left for an Additional Commands section.
+func TestRootHelpListsHelpTopicsApartFromCommands(t *testing.T) {
+	root := newRootCmd()
+	_, stdout, _, err := executeCommand(t, root, "--help")
+	if err != nil {
+		t.Fatalf("Execute(--help) error = %v", err)
+	}
+	if strings.Contains(stdout, "Additional Commands:") {
+		t.Errorf("root help has an Additional Commands section:\n%s", stdout)
+	}
+	sections := map[string]string{}
+	for _, title := range []string{"Commands:", "Help topics:"} {
+		_, section, ok := strings.Cut(stdout, "\n"+title+"\n")
+		if !ok {
+			t.Fatalf("root help has no %q section:\n%s", title, stdout)
+		}
+		section, _, _ = strings.Cut(section, "\n\n")
+		sections[title] = "\n" + section
+	}
+	for _, command := range root.Commands() {
+		if command.Hidden {
+			continue
+		}
+		title := "Commands:"
+		if isHelpTopic(command) {
+			title = "Help topics:"
+		}
+		if entry := "\n  " + command.Name() + " "; !strings.Contains(sections[title], entry) {
+			t.Errorf("root help does not list %q under %q:\n%s", command.Name(), title, stdout)
+		}
+	}
+}
+
+func TestRootVersion(t *testing.T) {
+	for _, flag := range []string{"--version", "-v"} {
+		_, stdout, stderr, err := executeCommand(t, newRootCmd(), flag)
+		if err != nil || stderr != "" {
+			t.Fatalf("Execute(%s) error = %v, stderr = %q", flag, err, stderr)
+		}
+		if want := "namo version " + Version + "\n"; stdout != want {
+			t.Errorf("Execute(%s) stdout = %q, want %q", flag, stdout, want)
+		}
+	}
+}
+
+// TestRootDefinesItsOwnHelpCompletionAndVersion requires namo's own help and
+// completion commands and --version flag, so running the root adds none of
+// the command library's defaults.
+func TestRootDefinesItsOwnHelpCompletionAndVersion(t *testing.T) {
+	root := newRootCmd()
+	if root.Version != "" {
+		t.Errorf("root.Version = %q, want empty", root.Version)
+	}
+	if root.Flags().Lookup("version") == nil {
+		t.Error("root has no --version flag")
+	}
+	constructed := map[string]*cobra.Command{}
+	for _, command := range root.Commands() {
+		constructed[command.Name()] = command
+	}
+	for _, name := range []string{"help", "completion"} {
+		if constructed[name] == nil {
+			t.Errorf("newRootCmd() has no %s command", name)
+		}
+	}
+
+	if _, _, _, err := executeCommand(t, root, "--no-stamp"); err != nil {
+		t.Fatalf("Execute(--no-stamp) error = %v", err)
+	}
+	commands := root.Commands()
+	if len(commands) != len(constructed) {
+		t.Errorf("Execute left %d root commands, want %d", len(commands), len(constructed))
+	}
+	for _, command := range commands {
+		if constructed[command.Name()] != command {
+			t.Errorf("Execute added or replaced the %s command", command.Name())
+		}
+	}
+}
+
 // TestEveryApplicationCommandMeetsHelpBaseline walks a freshly constructed
 // tree and fails on a missing short help, a missing long description, a
-// rendered help line over 80 columns, a help topic whose direct invocation
-// prints text other than its help, or a help topic the root long
-// description does not list.
+// rendered help line over 80 columns or holding a tab, which renders wider
+// than it counts, or a help topic whose direct invocation prints text other
+// than its help.
 func TestEveryApplicationCommandMeetsHelpBaseline(t *testing.T) {
 	root := newRootCmd()
 	topics := 0
@@ -279,15 +363,12 @@ func TestEveryApplicationCommandMeetsHelpBaseline(t *testing.T) {
 				t.Fatalf("Execute(%v --help) error = %v, stderr = %q", args, err, stderr)
 			}
 			for i, line := range strings.Split(help, "\n") {
-				if width := utf8.RuneCountInString(line); width > 80 {
-					t.Errorf("help line %d is %d columns, want at most 80: %q", i+1, width, line)
+				if width := utf8.RuneCountInString(line); width > 80 || strings.Contains(line, "\t") {
+					t.Errorf("help line %d is %d columns or holds a tab, want at most 80 columns: %q", i+1, width, line)
 				}
 			}
 			if !isHelpTopic(command) {
 				return
-			}
-			if invocation := "namo help " + command.Name(); !strings.Contains(root.Long, invocation) {
-				t.Errorf("root long description does not list %q", invocation)
 			}
 
 			for _, invocation := range [][]string{args, append([]string{"help"}, args...)} {

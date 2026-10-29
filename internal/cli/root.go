@@ -2,6 +2,7 @@
 package cli
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -18,10 +19,18 @@ type rootFlags struct {
 	shortStamp bool
 	size       string
 	stamp      string
+	version    bool
 }
 
 // Version is set at build time via -ldflags.
 var Version = "n/a"
+
+// The command groups that root help lists: the commands namo runs, then the
+// help topics.
+const (
+	commandGroupID   = "commands"
+	helpTopicGroupID = "topics"
+)
 
 // Execute parses the command line, runs the requested command, and returns
 // the process exit status: 0 on success, 2 on a usage error the command
@@ -32,14 +41,21 @@ func Execute() int {
 }
 
 // execute runs root with the arguments and streams set on it and returns the
-// exit status. The root's persistent pre-run hook records that the command
-// library accepted the invocation; an error before it is a usage error and
-// an error after it, from any runner including the library's own, is a
-// command failure. A line break or carriage return inside a message is
-// shown as \n or \r so the diagnostic stays one line.
+// exit status. The root's persistent pre-run hook, or the help function for
+// --help, records that the invocation was accepted; an error before that is
+// a usage error and an error after it, from any runner including the
+// library's own, is a command failure. A line break or carriage return
+// inside a message is shown as \n or \r so the diagnostic stays one line.
 func execute(root *cobra.Command) int {
 	accepted := false
-	root.PersistentPreRunE = func(cmd *cobra.Command, _ []string) error {
+	root.PersistentPreRunE = func(cmd *cobra.Command, args []string) error {
+		// The root has subcommands, so it leaves Args unset and Cobra
+		// accepts any root operand that follows '--'; reject it here.
+		if !cmd.HasParent() {
+			if err := cobra.NoArgs(cmd, args); err != nil {
+				return err
+			}
+		}
 		// Cobra checks required flags and flag groups after this hook, so
 		// check them here to keep those failures usage errors.
 		if err := cmd.ValidateRequiredFlags(); err != nil {
@@ -51,7 +67,33 @@ func execute(root *cobra.Command) int {
 		accepted = true
 		return nil
 	}
+
+	// Cobra prints help for --help before it validates operands, and when
+	// help cannot be written it reports the error itself and exits 0. Check
+	// the operands first, then render the help in memory so a failed write
+	// becomes the one failure line below.
+	var helpErr error
+	printHelp := root.HelpFunc()
+	root.SetHelpFunc(func(cmd *cobra.Command, args []string) {
+		if err := checkHelpOperands(cmd); err != nil {
+			helpErr = err
+			return
+		}
+		accepted = true
+		var help bytes.Buffer
+		out := cmd.OutOrStdout()
+		cmd.SetOut(&help)
+		printHelp(cmd, args)
+		cmd.SetOut(out)
+		if _, err := out.Write(help.Bytes()); err != nil {
+			helpErr = err
+		}
+	})
+
 	err := root.Execute()
+	if err == nil {
+		err = helpErr
+	}
 	if err == nil {
 		return 0
 	}
@@ -61,6 +103,23 @@ func execute(root *cobra.Command) int {
 		return 1
 	}
 	return 2
+}
+
+// checkHelpOperands returns the error cmd's positional grammar gives the
+// operands that came with --help, or nil when --help is not set. The root
+// accepts no operands, though it leaves Args unset.
+func checkHelpOperands(cmd *cobra.Command) error {
+	if help, _ := cmd.Flags().GetBool("help"); !help {
+		return nil
+	}
+	operands := cmd.Flags().Args()
+	if len(operands) == 0 {
+		return nil
+	}
+	if !cmd.HasParent() {
+		return cobra.NoArgs(cmd, operands)
+	}
+	return cmd.ValidateArgs(operands)
 }
 
 func newRootCmd() *cobra.Command {
@@ -85,24 +144,25 @@ strftime-style layout, --short-stamp is --stamp %H%M, and --no-stamp
 omits the stamp and keeps any prefix. --prefix and --raw-prefix are
 mutually exclusive, as are --stamp, --short-stamp, and --no-stamp.
 
-namo has no configuration file, reads no files, writes no files, and
-reads nothing from stdin; every option is a flag. The stamp follows the
-local time zone.
+namo has no configuration file, writes no files, and reads nothing from
+stdin; every option is a flag. The stamp follows the local time zone,
+read from /etc/localtime when TZ is unset, or from the zone file TZ
+names: an absolute path, or a name such as Asia/Tokyo looked up under
+/usr/share/zoneinfo, /usr/share/lib/zoneinfo, /usr/lib/locale/TZ,
+/etc/zoneinfo, and, when GOROOT is set, $GOROOT/lib/time/zoneinfo.zip.
+An empty, UTC, or unknown TZ, or a missing /etc/localtime, gives UTC.
+--no-stamp reads no zone data.
 
 Names go to stdout, one per line, and that plain text is the only output
-format; help and version output go to stdout too. A failure prints one
-line on stderr, 'namo: <message>', with no usage text. namo never
-prompts, works without a terminal, runs no external program, and never
-accesses the network. Without --raw-prefix or a custom --stamp, every
-name consists only of lowercase ASCII letters, digits, and hyphens, so
-it is safe inside "$(namo ...)" and in file paths. --raw-prefix and
---stamp are trusted input: line breaks, control bytes, and path
-separators in them pass through unchanged.
+format; help and version output go to stdout too. namo never prompts,
+works without a terminal, runs no external program, and never accesses
+the network. Without --raw-prefix or a custom --stamp, every name
+consists only of lowercase ASCII letters, digits, and hyphens, so it is
+safe inside "$(namo ...)" and in file paths. --raw-prefix and --stamp
+are trusted input: line breaks, control bytes, and path separators in
+them pass through unchanged.
 
-Help topics:
-  pattern     The name parts and slug sizes:      namo help pattern
-  stamps      Stamp layout verbs and rendering:   namo help stamps
-  exit-codes  Exit statuses and the stderr line:  namo help exit-codes`,
+` + failureContract,
 		Example: `  # Sortable log or scratch file
   log=".sandbox/$(namo -p fish-profile).log"
 
@@ -125,7 +185,6 @@ Help topics:
 
   # Prefix passed through as given
   namo --raw-prefix Build_42`,
-		Version:            Version,
 		DisableSuggestions: true,
 		SilenceUsage:       true,
 		SilenceErrors:      true,
@@ -142,17 +201,28 @@ Help topics:
 	f.StringVar(&flags.stamp, "stamp", namegen.DefaultStampLayout, "strftime-style stamp layout")
 	f.BoolVar(&flags.shortStamp, "short-stamp", false, "use an HHMM stamp (--stamp %H%M)")
 	f.BoolVar(&flags.noStamp, "no-stamp", false, "omit the stamp and keep any prefix")
+	f.BoolVarP(&flags.version, "version", "v", false, "print the version")
 	root.MarkFlagsMutuallyExclusive("stamp", "short-stamp", "no-stamp")
 	root.MarkFlagsMutuallyExclusive("prefix", "raw-prefix")
 	root.InitDefaultHelpFlag()
-	root.InitDefaultVersionFlag()
 
-	root.AddCommand(newPatternCmd(), newStampsCmd(), newExitCodesCmd())
+	root.AddGroup(
+		&cobra.Group{ID: commandGroupID, Title: "Commands:"},
+		&cobra.Group{ID: helpTopicGroupID, Title: "Help topics:"},
+	)
+	help := newHelpCmd()
+	root.SetHelpCommand(help)
+	root.AddCommand(help, newCompletionCmd(), newPatternCmd(), newStampsCmd(), newExitCodesCmd())
 
 	return root
 }
 
 func runRoot(cmd *cobra.Command, flags *rootFlags) error {
+	if flags.version {
+		_, err := fmt.Fprintf(cmd.OutOrStdout(), "namo version %s\n", Version)
+		return err
+	}
+
 	if err := namegen.ValidateCount(flags.count); err != nil {
 		return err
 	}
