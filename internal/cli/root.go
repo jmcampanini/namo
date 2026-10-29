@@ -210,6 +210,9 @@ them pass through unchanged.
 		&cobra.Group{ID: commandGroupID, Title: "Commands:"},
 		&cobra.Group{ID: helpTopicGroupID, Title: "Help topics:"},
 	)
+	// No namo command takes a file operand, so shell completion offers no
+	// file names unless a command offers its own completions.
+	root.CompletionOptions.SetDefaultShellCompDirective(cobra.ShellCompDirectiveNoFileComp)
 	help := newHelpCmd()
 	root.SetHelpCommand(help)
 	root.AddCommand(help, newCompletionCmd(), newPatternCmd(), newStampsCmd(), newExitCodesCmd())

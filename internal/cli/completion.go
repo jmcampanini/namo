@@ -43,9 +43,6 @@ completions. A missing or unknown SHELL is a usage error.
 		},
 	}
 	cmd.Flags().BoolVar(&noDescriptions, "no-descriptions", false, "disable completion descriptions")
-	// Offer no file names once the shell operand is given; any further
-	// operand is a usage error.
-	cmd.CompletionOptions.SetDefaultShellCompDirective(cobra.ShellCompDirectiveNoFileComp)
 	return cmd
 }
 

@@ -44,12 +44,18 @@ func TestCompletionPrintsTheShellScript(t *testing.T) {
 }
 
 // TestShellCompletionOffersNoFileNames requires shell completion to offer
-// no file names where namo accepts no further operand.
+// no file names, because no namo command or flag takes a file.
 func TestShellCompletionOffersNoFileNames(t *testing.T) {
 	want := fmt.Sprintf(":%d\n", cobra.ShellCompDirectiveNoFileComp)
 	for _, args := range [][]string{
 		{"completion", "bash", ""},
 		{"help", "pattern", ""},
+		{"pattern", ""},
+		{"stamps", ""},
+		{"exit-codes", ""},
+		{"--no-stamp", ""},
+		{"--size", ""},
+		{"-n", "3", ""},
 		{"--help", ""},
 		{"--version", ""},
 		{"-v", ""},

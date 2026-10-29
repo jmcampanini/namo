@@ -16,8 +16,7 @@ func applicationCommands(root *cobra.Command) map[string]*cobra.Command {
 	return commands
 }
 
-// isHelpTopic reports whether command is a help topic, which newHelpTopic
-// places in the help topic group.
+// isHelpTopic reports whether newHelpTopic built command.
 func isHelpTopic(command *cobra.Command) bool {
-	return command.GroupID == helpTopicGroupID
+	return command.Annotations[helpTopicAnnotation] == "true"
 }
