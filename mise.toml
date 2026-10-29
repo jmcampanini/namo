@@ -1,15 +1,17 @@
-min_version = "2026.1.0"
+# The oldest mise release that reads lockfile revision 3, which mise.lock uses.
+min_version = "2026.9.16"
 
 [settings]
 lockfile = true
 lockfile_platforms = ["linux-x64", "macos-arm64"]
 
+# Each tool a task runs is pinned to an exact version, the latest release of its supported line, so every machine runs the same build.
 [tools]
 go = "1.27.3"
 golangci-lint = "2.15.0"
 goreleaser = "2.19.0"
-"go:golang.org/x/vuln/cmd/govulncheck" = "1.6.0"
-node = "24.21.0"
+"go:golang.org/x/vuln/cmd/govulncheck" = "1.9.0"
+node = "24.22.2"
 "npm:markdownlint-cli2" = "0.24.0"
 
 [env]
@@ -29,24 +31,16 @@ description = "Run all tests uncached with the race detector."
 run = "go test -count=1 -race ./..."
 
 [tasks.lint]
-description = "Run static analysis."
+description = "Run static analysis and report unformatted code."
 run = "golangci-lint run"
 
 [tasks.lint-fix]
-description = "Run static analysis with --fix."
+description = "Apply the fixes static analysis can make, including formatting."
 run = "golangci-lint run --fix"
 
 [tasks.lint-markdown]
 description = "Lint tracked Markdown using the shared Markdown rules."
 run = "git ls-files -z -- '*.md' '*.markdown' | xargs -0 markdownlint-cli2"
-
-[tasks.fmt]
-description = "Format Go source files."
-run = "golangci-lint fmt"
-
-[tasks.fmt-check]
-description = "Verify formatting without changing files."
-run = "golangci-lint fmt --diff"
 
 [tasks.tidy]
 description = "Apply go mod tidy."
@@ -71,15 +65,6 @@ if [ "$out" != "namo version $version" ]; then
 fi
 '''
 
-[tasks.vuln]
-description = "Check dependencies and reachable code for known vulnerabilities."
-run = "govulncheck ./..."
-
-# check is read-only: it must leave the tracked tree unchanged and create nothing outside ignored paths. CI asserts a clean checkout before and after it. Add report-only tasks here; fixers (fmt, lint-fix, tidy) stay out.
-[tasks.check]
-description = "Run the complete local verification contract."
-depends = ["fmt-check", "tidy-check", "lint", "lint-markdown", "test", "version-check", "vuln", "release-snapshot"]
-
 [tasks.release-snapshot]
 description = "Build release archives into dist/ with GoReleaser without publishing."
 run = [
@@ -97,6 +82,15 @@ if [ "${GITHUB_ACTIONS:-}" != "true" ] || [ "${GITHUB_WORKFLOW:-}" != "Release" 
 fi
 goreleaser release --clean
 """
+
+[tasks.vuln]
+description = "Check dependencies and reachable code for known vulnerabilities."
+run = "govulncheck ./..."
+
+# check runs every verification task and writes only under ignored paths, so CI can assert a clean checkout after it.
+[tasks.check]
+description = "Run the complete local verification contract."
+depends = ["tidy-check", "lint", "lint-markdown", "test", "build", "version-check", "release-snapshot", "vuln"]
 
 [tasks.clean]
 description = "Remove build artifacts and the Go test cache."
