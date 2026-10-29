@@ -5,18 +5,33 @@ namo generates memorable, sortable names of the form `[prefix-][stamp-]slug`, li
 
 ## Install
 
-Releases ship binaries for Linux and macOS on amd64 and arm64.
+namo publishes versioned releases with prebuilt binaries for Linux and macOS on amd64 and arm64, plus a Homebrew cask.
+
+Install or upgrade with [mise](https://mise.jdx.dev), which installs the binary from the GitHub release:
 
 ```sh
-mise use -g github:jmcampanini/namo   # mise
-mise upgrade github:jmcampanini/namo # mise upgrade
-brew install jmcampanini/tap/namo     # Homebrew
-brew upgrade jmcampanini/tap/namo     # Homebrew upgrade
+mise use -g github:jmcampanini/namo
+mise upgrade github:jmcampanini/namo
 ```
 
-Or download an archive from the [releases page](https://github.com/jmcampanini/namo/releases) and put `namo` on your `PATH`; to upgrade, download the new release and replace the binary. Each release includes a SHA-256 checksums file and GitHub build provenance attestations. On macOS, a browser download needs `xattr -d com.apple.quarantine namo` before it runs; mise, Homebrew, `curl`, and `gh` downloads do not.
+Install or upgrade the cask from the `jmcampanini/tap` tap with [Homebrew](https://brew.sh):
 
-To build from source, install [mise](https://mise.jdx.dev), then run:
+```sh
+brew install jmcampanini/tap/namo
+brew upgrade jmcampanini/tap/namo
+```
+
+Install or upgrade from a release archive with [GitHub CLI](https://cli.github.com) signed in through `gh auth login`, replacing `darwin_arm64` with your OS and architecture and `~/.local/bin` with a directory on your `PATH`:
+
+```sh
+cd "$(mktemp -d)"
+gh release download --repo jmcampanini/namo --pattern 'namo_*_darwin_arm64.tar.gz'
+gh attestation verify namo_*_darwin_arm64.tar.gz --repo jmcampanini/namo
+tar -xzf namo_*_darwin_arm64.tar.gz namo
+install -m 0755 namo ~/.local/bin/namo
+```
+
+Build from source with Git and [mise](https://mise.jdx.dev), which supplies the pinned Go toolchain, replacing `~/.local/bin` with a directory on your `PATH`:
 
 ```sh
 git clone https://github.com/jmcampanini/namo
@@ -24,9 +39,8 @@ cd namo
 mise trust
 mise install
 mise run build
+install -m 0755 build/namo ~/.local/bin/namo
 ```
-
-Copy `./build/namo` onto your `PATH`.
 
 
 ## Representative commands
@@ -50,4 +64,4 @@ $ namo -n 3 -s short
 260711154501-business-school
 ```
 
-The canonical reference is `namo --help`, with recipes under Examples, and the help topics `namo help pattern`, `namo help stamps`, and `namo help exit-codes`.
+The canonical reference is `namo --help` (recipes under Examples), each command's `--help` such as `namo completion --help`, and the help topics `namo help pattern`, `namo help stamps`, and `namo help exit-codes`.
