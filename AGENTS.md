@@ -1,10 +1,13 @@
 ## Build and validate
 
-- Run tasks with `mise run <task>`; do not call `go`, `golangci-lint`, or similar tools directly.
-- `mise run check` runs the complete verification contract. **Run this before declaring work done.**
-- `mise run release-snapshot` builds the release archives into `dist/` without publishing; `mise run release` publishes and only runs in the Release workflow on a `v*` tag.
+- Run tasks with `mise run <task>` instead of calling `go`, `golangci-lint`, or other pinned tools directly.
+- Run `mise run check`, the verification command, before declaring work done.
+- Bump a tool pin within its supported line with `mise upgrade --bump --pin <tool>@<line>`, such as `node@24`, then run `mise lock` and `mise run check`, and commit `mise.toml`, `mise.lock`, and `.mise/locks/` together.
 
 
-## Conventions
+## Documentation
 
-- Keep command help the canonical user-facing documentation and the README a landing page; keep both consistent with observable behavior.
+- Keep command help the canonical user-facing documentation.
+- Keep the README a landing page that points to command help.
+- Keep command help and the README consistent with observable behavior.
+- Keep each Markdown paragraph on one source line.
