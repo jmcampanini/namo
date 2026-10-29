@@ -2,19 +2,15 @@ package cli
 
 import "github.com/spf13/cobra"
 
-// failureContract is the stderr contract every failure follows, composed
-// into the long description of every command so they cannot drift apart.
-const failureContract = `A failure prints exactly one line on stderr, 'namo: <message>', and no
-usage text; a line break or carriage return inside the message is shown
-as \n or \r.`
-
 func newExitCodesCmd() *cobra.Command {
 	return newHelpTopic("exit-codes", "Exit statuses, their meanings, and the stderr format",
 		`namo exits 0, 1, or 2:
 
   0  Success. The requested names are on stdout, one per line, and
      stderr is empty. --help, --version, 'namo help', every help topic,
-     and 'namo completion SHELL' also exit 0. No failure exits 0.
+     and 'namo completion SHELL' also exit 0; --help and --version do
+     not check the values of --count, --prefix, --size, or --stamp. No
+     failure exits 0.
   1  A failure after the invocation was accepted: --count outside 1 to
      100, a --prefix with no ASCII letter or digit, a --size other than
      short, standard, or long, a --stamp layout with an unsupported verb

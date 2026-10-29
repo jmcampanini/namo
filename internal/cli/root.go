@@ -2,7 +2,6 @@
 package cli
 
 import (
-	"bytes"
 	"fmt"
 	"strings"
 
@@ -68,26 +67,23 @@ func execute(root *cobra.Command) int {
 		return nil
 	}
 
-	// Cobra prints help for --help before it validates operands, and when
-	// help cannot be written it reports the error itself and exits 0. Check
-	// the operands first, then render the help in memory so a failed write
-	// becomes the one failure line below.
+	// Cobra prints help for --help before it checks operands and flag
+	// groups, and when the help cannot be written it prints the bare error
+	// and exits 0. Check them first, then write the help so a failure
+	// becomes the one failure line below. The help command and the help
+	// topics print help without --help and return their own write errors.
 	var helpErr error
 	printHelp := root.HelpFunc()
 	root.SetHelpFunc(func(cmd *cobra.Command, args []string) {
-		if err := checkHelpOperands(cmd); err != nil {
-			helpErr = err
+		if help, _ := cmd.Flags().GetBool("help"); !help {
+			printHelp(cmd, args)
+			return
+		}
+		if helpErr = checkHelpInvocation(cmd); helpErr != nil {
 			return
 		}
 		accepted = true
-		var help bytes.Buffer
-		out := cmd.OutOrStdout()
-		cmd.SetOut(&help)
-		printHelp(cmd, args)
-		cmd.SetOut(out)
-		if _, err := out.Write(help.Bytes()); err != nil {
-			helpErr = err
-		}
+		helpErr = writeHelp(cmd, printHelp)
 	})
 
 	err := root.Execute()
@@ -105,21 +101,22 @@ func execute(root *cobra.Command) int {
 	return 2
 }
 
-// checkHelpOperands returns the error cmd's positional grammar gives the
-// operands that came with --help, or nil when --help is not set. The root
-// accepts no operands, though it leaves Args unset.
-func checkHelpOperands(cmd *cobra.Command) error {
-	if help, _ := cmd.Flags().GetBool("help"); !help {
-		return nil
+// checkHelpInvocation returns the usage error cmd reports without --help for
+// the operands and flag groups given with it. The root accepts no operands,
+// though it leaves Args unset.
+func checkHelpInvocation(cmd *cobra.Command) error {
+	if operands := cmd.Flags().Args(); len(operands) > 0 {
+		var err error
+		if cmd.HasParent() {
+			err = cmd.ValidateArgs(operands)
+		} else {
+			err = cobra.NoArgs(cmd, operands)
+		}
+		if err != nil {
+			return err
+		}
 	}
-	operands := cmd.Flags().Args()
-	if len(operands) == 0 {
-		return nil
-	}
-	if !cmd.HasParent() {
-		return cobra.NoArgs(cmd, operands)
-	}
-	return cmd.ValidateArgs(operands)
+	return cmd.ValidateFlagGroups()
 }
 
 func newRootCmd() *cobra.Command {
@@ -202,6 +199,9 @@ them pass through unchanged.
 	f.BoolVar(&flags.shortStamp, "short-stamp", false, "use an HHMM stamp (--stamp %H%M)")
 	f.BoolVar(&flags.noStamp, "no-stamp", false, "omit the stamp and keep any prefix")
 	f.BoolVarP(&flags.version, "version", "v", false, "print the version")
+	// Shell completion offers nothing after --help or --version only when
+	// the flag carries this annotation, which Cobra sets on its own flags.
+	_ = f.SetAnnotation("version", cobra.FlagSetByCobraAnnotation, []string{"true"})
 	root.MarkFlagsMutuallyExclusive("stamp", "short-stamp", "no-stamp")
 	root.MarkFlagsMutuallyExclusive("prefix", "raw-prefix")
 	root.InitDefaultHelpFlag()

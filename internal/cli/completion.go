@@ -16,16 +16,19 @@ func newCompletionCmd() *cobra.Command {
 		Long: `'namo completion SHELL' prints the completion script for SHELL, one of
 bash, fish, powershell, or zsh, to stdout. The script is shell source
 text, the only output format; loading it lets the shell complete namo's
-commands, flags, and help topics. --no-descriptions leaves the command
-and flag descriptions out of the completions. A missing or unknown SHELL
-is a usage error. 'namo completion' never prompts, works without a
-terminal, and reads and writes no files.
+commands, flags, and help topics. The bash script needs the
+bash-completion package, and the zsh script needs compinit loaded first.
+--no-descriptions leaves the command and flag descriptions out of the
+completions. A missing or unknown SHELL is a usage error.
 
-` + failureContract,
+` + textCommandContract,
 		Example: `  # Load completions in the current shell
-  source <(namo completion bash)
   namo completion fish | source
   namo completion powershell | Out-String | Invoke-Expression
+
+  # Load bash completions, which need bash 4 or later and the
+  # bash-completion package loaded first
+  source <(namo completion bash)
 
   # Load zsh completions, which need compinit loaded first
   autoload -U compinit && compinit
@@ -40,6 +43,9 @@ terminal, and reads and writes no files.
 		},
 	}
 	cmd.Flags().BoolVar(&noDescriptions, "no-descriptions", false, "disable completion descriptions")
+	// Offer no file names once the shell operand is given; any further
+	// operand is a usage error.
+	cmd.CompletionOptions.SetDefaultShellCompDirective(cobra.ShellCompDirectiveNoFileComp)
 	return cmd
 }
 

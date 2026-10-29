@@ -240,7 +240,7 @@ func TestRootCommandBatchSharesStamp(t *testing.T) {
 	}
 }
 
-func TestRootHelpNamesFlagsAndTopics(t *testing.T) {
+func TestRootHelpNamesFlags(t *testing.T) {
 	_, stdout, stderr, err := executeCommand(t, newRootCmd(), "--help")
 	if err != nil {
 		t.Fatalf("Execute(--help) error = %v", err)
@@ -278,6 +278,9 @@ func TestRootHelpListsHelpTopicsApartFromCommands(t *testing.T) {
 	}
 	for _, command := range root.Commands() {
 		if command.Hidden {
+			if isHelpTopic(command) {
+				t.Errorf("help topic %q is hidden from root help", command.Name())
+			}
 			continue
 		}
 		title := "Commands:"
@@ -310,8 +313,10 @@ func TestRootDefinesItsOwnHelpCompletionAndVersion(t *testing.T) {
 	if root.Version != "" {
 		t.Errorf("root.Version = %q, want empty", root.Version)
 	}
-	if root.Flags().Lookup("version") == nil {
-		t.Error("root has no --version flag")
+	for _, flag := range []string{"help", "version"} {
+		if root.Flags().Lookup(flag) == nil {
+			t.Errorf("newRootCmd() registers no --%s flag", flag)
+		}
 	}
 	constructed := map[string]*cobra.Command{}
 	for _, command := range root.Commands() {
@@ -338,17 +343,17 @@ func TestRootDefinesItsOwnHelpCompletionAndVersion(t *testing.T) {
 }
 
 // TestEveryApplicationCommandMeetsHelpBaseline walks a freshly constructed
-// tree and fails on a missing short help, a missing long description, a
-// rendered help line over 80 columns or holding a tab, which renders wider
-// than it counts, or a help topic whose direct invocation prints text other
-// than its help.
+// tree and fails on a missing short help, a missing long description, help
+// that does not open with that description, a rendered help line over 80
+// columns or holding a tab, which renders wider than it counts, or a help
+// topic whose direct invocation prints text other than its help. It runs the
+// path the binary takes, through execute.
 func TestEveryApplicationCommandMeetsHelpBaseline(t *testing.T) {
-	root := newRootCmd()
-	topics := 0
-	for path, command := range applicationCommands(root) {
-		if isHelpTopic(command) {
-			topics++
-		}
+	commands := applicationCommands(newRootCmd())
+	if exitCodes := commands["namo exit-codes"]; exitCodes == nil || !isHelpTopic(exitCodes) {
+		t.Error("namo exit-codes is not a help topic; the exit-codes topic is required")
+	}
+	for path, command := range commands {
 		t.Run(path, func(t *testing.T) {
 			if strings.TrimSpace(command.Short) == "" {
 				t.Error("missing short help")
@@ -358,9 +363,12 @@ func TestEveryApplicationCommandMeetsHelpBaseline(t *testing.T) {
 			}
 
 			args := strings.Fields(path)[1:]
-			_, help, stderr, err := executeCommand(t, newRootCmd(), append(args, "--help")...)
-			if err != nil || stderr != "" {
-				t.Fatalf("Execute(%v --help) error = %v, stderr = %q", args, err, stderr)
+			status, help, stderr := runCLI(t, append(args, "--help")...)
+			if status != 0 || stderr != "" {
+				t.Fatalf("execute(%v --help) = %d, stderr = %q", args, status, stderr)
+			}
+			if !strings.HasPrefix(help, strings.TrimSpace(command.Long)+"\n") {
+				t.Errorf("execute(%v --help) does not open with the long description:\n%s", args, help)
 			}
 			for i, line := range strings.Split(help, "\n") {
 				if width := utf8.RuneCountInString(line); width > 80 || strings.Contains(line, "\t") {
@@ -372,17 +380,14 @@ func TestEveryApplicationCommandMeetsHelpBaseline(t *testing.T) {
 			}
 
 			for _, invocation := range [][]string{args, append([]string{"help"}, args...)} {
-				_, stdout, stderr, err := executeCommand(t, newRootCmd(), invocation...)
-				if err != nil || stderr != "" {
-					t.Fatalf("Execute(%v) error = %v, stderr = %q", invocation, err, stderr)
+				status, stdout, stderr := runCLI(t, invocation...)
+				if status != 0 || stderr != "" {
+					t.Fatalf("execute(%v) = %d, stderr = %q", invocation, status, stderr)
 				}
 				if stdout != help {
-					t.Errorf("Execute(%v) output differs from its help:\n%s\n---\n%s", invocation, stdout, help)
+					t.Errorf("execute(%v) output differs from its help:\n%s\n---\n%s", invocation, stdout, help)
 				}
 			}
 		})
-	}
-	if topics == 0 {
-		t.Error("found no help topic; the exit-codes topic is required")
 	}
 }

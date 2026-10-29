@@ -1,8 +1,11 @@
 package cli
 
 import (
+	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/spf13/cobra"
 )
 
 func TestCompletionPrintsTheShellScript(t *testing.T) {
@@ -36,6 +39,28 @@ func TestCompletionPrintsTheShellScript(t *testing.T) {
 					t.Errorf("Execute(%v) requests completions without descriptions = %t, want %t", args, got, noDescriptions)
 				}
 			})
+		}
+	}
+}
+
+// TestShellCompletionOffersNoFileNames requires shell completion to offer
+// no file names where namo accepts no further operand.
+func TestShellCompletionOffersNoFileNames(t *testing.T) {
+	want := fmt.Sprintf(":%d\n", cobra.ShellCompDirectiveNoFileComp)
+	for _, args := range [][]string{
+		{"completion", "bash", ""},
+		{"help", "pattern", ""},
+		{"--help", ""},
+		{"--version", ""},
+		{"-v", ""},
+	} {
+		request := append([]string{"__complete"}, args...)
+		_, stdout, _, err := executeCommand(t, newRootCmd(), request...)
+		if err != nil {
+			t.Fatalf("Execute(%q) error = %v", request, err)
+		}
+		if stdout != want {
+			t.Errorf("Execute(%q) = %q, want %q", request, stdout, want)
 		}
 	}
 }

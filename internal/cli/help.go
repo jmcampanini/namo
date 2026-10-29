@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 
@@ -9,7 +10,7 @@ import (
 
 func newHelpCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:     "help [command]",
+		Use:     "help [NAME]",
 		Short:   "Print the help of a command or help topic",
 		GroupID: commandGroupID,
 		Long: `'namo help' prints the root help, the same text as 'namo --help', and
@@ -17,10 +18,9 @@ func newHelpCmd() *cobra.Command {
 same text as 'namo NAME --help'. A NAME that is not a command or help
 topic, or an operand after one, is a usage error.
 
-Help goes to stdout as plain text, the only output format. 'namo help'
-never prompts, works without a terminal, and reads and writes no files.
+Help goes to stdout as plain text, the only output format.
 
-` + failureContract,
+` + textCommandContract,
 		Args: func(cmd *cobra.Command, args []string) error {
 			_, err := findHelpTarget(cmd, args)
 			return err
@@ -34,9 +34,22 @@ never prompts, works without a terminal, and reads and writes no files.
 			// Cobra adds the help flag when a command runs; add it here so
 			// the help matches what 'namo NAME --help' prints.
 			target.InitDefaultHelpFlag()
-			return target.Help()
+			return writeHelp(target, target.HelpFunc())
 		},
 	}
+}
+
+// writeHelp renders cmd's help with render in memory, then writes it to
+// cmd's stdout and returns the write error, which Cobra's help function
+// would print without the namo: prefix and then ignore.
+func writeHelp(cmd *cobra.Command, render func(*cobra.Command, []string)) error {
+	var help bytes.Buffer
+	out := cmd.OutOrStdout()
+	cmd.SetOut(&help)
+	render(cmd, nil)
+	cmd.SetOut(out)
+	_, err := out.Write(help.Bytes())
+	return err
 }
 
 // findHelpTarget returns the command or help topic that args name, walking

@@ -2,7 +2,7 @@
 
 - Run tasks with `mise run <task>` instead of calling `go`, `golangci-lint`, or other pinned tools directly.
 - Run `mise run check`, the verification command, before declaring work done.
-- Bump a tool pin with `mise upgrade --bump <tool>`, then run `mise lock` and `mise run check`, and commit `mise.toml`, `mise.lock`, and `.mise/locks/` together.
+- Bump a tool pin within its supported line with `mise upgrade --bump --pin <tool>@<line>`, such as `node@24`, then run `mise lock` and `mise run check`, and commit `mise.toml`, `mise.lock`, and `.mise/locks/` together.
 
 
 ## Documentation

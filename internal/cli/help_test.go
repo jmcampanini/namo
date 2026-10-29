@@ -9,17 +9,17 @@ func TestHelpCommandPrintsTheNamedCommandsHelp(t *testing.T) {
 	for path := range applicationCommands(newRootCmd()) {
 		t.Run(path, func(t *testing.T) {
 			args := strings.Fields(path)[1:]
-			_, want, _, err := executeCommand(t, newRootCmd(), append(args, "--help")...)
-			if err != nil {
-				t.Fatalf("Execute(%v --help) error = %v", args, err)
+			status, want, stderr := runCLI(t, append(args, "--help")...)
+			if status != 0 || stderr != "" {
+				t.Fatalf("execute(%v --help) = %d, stderr = %q", args, status, stderr)
 			}
 			invocation := append([]string{"help"}, args...)
-			_, got, stderr, err := executeCommand(t, newRootCmd(), invocation...)
-			if err != nil || stderr != "" {
-				t.Fatalf("Execute(%v) error = %v, stderr = %q", invocation, err, stderr)
+			status, got, stderr := runCLI(t, invocation...)
+			if status != 0 || stderr != "" {
+				t.Fatalf("execute(%v) = %d, stderr = %q", invocation, status, stderr)
 			}
 			if got != want {
-				t.Errorf("Execute(%v) output differs from --help:\n%s\n---\n%s", invocation, got, want)
+				t.Errorf("execute(%v) output differs from --help:\n%s\n---\n%s", invocation, got, want)
 			}
 		})
 	}
