@@ -5,20 +5,13 @@ namo generates memorable, sortable names of the form `[prefix-][stamp-]slug`, li
 
 ## Install
 
-namo publishes versioned releases with prebuilt binaries for Linux and macOS on amd64 and arm64, plus a Homebrew cask.
+namo publishes versioned releases with prebuilt binaries for Linux and macOS on amd64 and arm64.
 
 Install or upgrade with [mise](https://mise.jdx.dev), which installs the binary from the GitHub release:
 
 ```sh
 mise use -g github:jmcampanini/namo
 mise upgrade github:jmcampanini/namo
-```
-
-Install or upgrade the cask from the `jmcampanini/tap` tap with [Homebrew](https://brew.sh):
-
-```sh
-brew install jmcampanini/tap/namo
-brew upgrade jmcampanini/tap/namo
 ```
 
 Install or upgrade from a release archive with [GitHub CLI](https://cli.github.com) signed in through `gh auth login`, replacing `darwin_arm64` with your OS and architecture and `~/.local/bin` with a directory on your `PATH`:
