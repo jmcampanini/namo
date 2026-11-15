@@ -1,5 +1,5 @@
-charm.land/hotdiva2000 v0.0.0-20260710005020-a67de817dc1b h1:D6usRBXl7zyHqYlcvIcpZNqJmcLsuH/o0ND2J0Xln6E=
-charm.land/hotdiva2000 v0.0.0-20260710005020-a67de817dc1b/go.mod h1:fI829ncaCscXgLE1q6C90g3yFOKKgJVel7e0LrLvAq4=
+charm.land/hotdiva2000 v0.0.0-20260812204011-eec4f2fb2051 h1:sU5qtc762t5EAcFYHvn8lI1eEteAzUSPZzy2DuuJvxI=
+charm.land/hotdiva2000 v0.0.0-20260812204011-eec4f2fb2051/go.mod h1:fI829ncaCscXgLE1q6C90g3yFOKKgJVel7e0LrLvAq4=
 github.com/charmbracelet/x/exp/ordered v0.1.0 h1:55/qLwjIh0gL0Vni+QAWk7T/qRVP6sBf+2agPBgnOFE=
 github.com/charmbracelet/x/exp/ordered v0.1.0/go.mod h1:5UHwmG+is5THxMyCJHNPCn2/ecI07aKNrW+LcResjJ8=
 github.com/cpuguy83/go-md2man/v2 v2.0.6/go.mod h1:oOW0eioCTA6cOiMLiUPZOpcVxMig6NIQQ7OS05n1F4g=
