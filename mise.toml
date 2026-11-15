@@ -7,7 +7,7 @@ lockfile_platforms = ["linux-x64", "macos-arm64"]
 
 # Each tool a task runs is pinned to an exact version, the latest release of its supported line, so every machine runs the same build.
 [tools]
-go = "1.27.3"
+go = "1.27.4"
 golangci-lint = "2.15.0"
 goreleaser = "2.20.2"
 "go:golang.org/x/vuln/cmd/govulncheck" = "1.9.0"
