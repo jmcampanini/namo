@@ -3,7 +3,7 @@ module github.com/jmcampanini/namo
 go 1.27.3
 
 require (
-	charm.land/hotdiva2000 v0.0.0-20260710005020-a67de817dc1b
+	charm.land/hotdiva2000 v0.0.0-20260812204011-eec4f2fb2051
 	github.com/spf13/cobra v1.10.2
 )
 
