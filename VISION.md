@@ -10,7 +10,7 @@ namo gives scripts, dotfiles, and coding agents one command for naming the thing
 
 namo is responsible for producing good names on demand, as the first principle below defines them. Its defaults follow its callers' most common call, so that call stays short.
 
-namo serves the naming uses above. Anyone may run it, but a request counts only when it serves those uses. That someone could use a feature is not a reason to add it, and a feature that only a different kind of caller would want is out of scope even if it is small and well built.
+Anyone may run namo, but a request counts only when it serves the naming uses above. Being usable by someone is not a reason to add a feature, and a feature that only a different kind of caller would want is out of scope even if it is small and well built.
 
 namo is a command-line program, and invoking the command is its interface. A single interface keeps namo free to restructure its generator under its clean-break policy. The accepted cost is that every consumer depends on the namo binary being installed.
 
@@ -20,7 +20,7 @@ namo is a command-line program, and invoking the command is its interface. A sin
 
 ### What makes a good name
 
-A good namo name is sortable, recognizable, grouped by purpose, safe, and distinct within its batch. With the default stamp, names sort by creation time. The words let a person pick a name out of a listing and remember it. A prefix keeps related names together and says what they are for. A name is safe as "Safe output by default" defines it. No two names from one call share a slug. By default, safety wins over every other quality. Sorting and brevity trade off at the caller's choice: a caller who needs a short handle drops the stamp with a flag, and the default keeps the stamp.
+A good namo name is sortable, recognizable, grouped by purpose, safe, and distinct within its batch. With the default stamp, names sort by creation time. The words let a person pick a name out of a listing and remember it. A prefix keeps related names together and says what they are for. A name is safe as "Safe output by default" defines it. No two names from one call share a slug. By default, safety wins over every other quality. The caller chooses between sorting and brevity: the default keeps the stamp, and a caller who needs a short handle drops it with a flag.
 
 
 ### Every run stands alone
@@ -30,7 +30,7 @@ namo is stateless: each run builds its names from its own input, the clock, and 
 
 ### The words come from hotdiva2000
 
-namo's slugs come from hotdiva2000, irreverent words included, and namo does not curate them for taste, by default or as an option; it drops only slugs that would break its safe output. Those words make a name memorable enough to pick out of a listing, which is why namo uses words at all. The accepted cost is that some names are awkward where colleagues or the public can see them, such as branch names and shared directories.
+namo's slugs come from hotdiva2000, irreverent words included. namo does not curate them for taste, by default or as an option, and drops only slugs that would break its safe output. Those words make a name memorable enough to pick out of a listing, which is why namo uses words at all. The accepted cost is that some names are awkward where colleagues or the public can see them, such as branch names and shared directories.
 
 
 ### No configuration
@@ -40,12 +40,12 @@ namo is zero-config: every option is a flag on the invocation, and no file or en
 
 ### Safe to run unattended
 
-namo never prompts, runs no external program, and never accesses the network. Scripts and agents call it unattended, usually inside command substitution, so it must finish promptly with no one attending it. The accepted cost is that namo gives up any improvement to its names that would need a person, another program, or a network service.
+namo never prompts, runs no external program, and never accesses the network. Scripts and agents call it unattended, usually inside command substitution, so it must finish promptly on its own. The accepted cost is that namo gives up any improvement to its names that would need a person, another program, or a network service.
 
 
 ### Safe output by default
 
-Without an explicit trusted-input flag, a name contains only lowercase ASCII letters, digits, and hyphens. Callers put namo's output directly into file paths and command substitution without quoting or validating it, so the default must never produce a character that could break a path or a shell. Input that could carry unsafe characters, such as a verbatim prefix or a custom stamp layout, is allowed only through a flag documented as accepting trusted input. namo keeps these escape hatches even when no caller uses them, because they let a caller handle a rare case without waiting for a change to namo. The accepted cost is that a normalized prefix loses capitals and punctuation.
+Without an explicit trusted-input flag, a name contains only lowercase ASCII letters, digits, and hyphens. Callers put namo's output directly into file paths and command substitution without quoting or validating it, so the default must never produce a character that could break a path or a shell. Input that could carry unsafe characters, such as a verbatim prefix or a custom stamp layout, is allowed only through a flag documented as accepting trusted input. namo keeps these trusted-input flags even when no caller uses them, because they let a caller handle a rare case without waiting for a change to namo. The accepted cost is that a normalized prefix loses capitals and punctuation.
 
 
 ### Better design over compatibility
