@@ -20,7 +20,7 @@ namo is a command-line program, and invoking the command is its interface. A sin
 
 ### What makes a good name
 
-A good namo name is sortable, recognizable, grouped by purpose, safe, and distinct within its batch. With the default stamp, names sort by creation time. The words let a person pick a name out of a listing and remember it. A prefix keeps related names together and says what they are for. A name is safe as "Safe output by default" defines it. No two names from one call share a slug. By default, safety wins over every other quality. The caller chooses between sorting and brevity: the default keeps the stamp, and a caller who needs a short handle drops it with a flag.
+A good namo name is sortable, recognizable, grouped by purpose, safe, and distinct within its batch. With the default stamp, names sort by creation time. The words let a person pick a name out of a listing and remember it. A prefix keeps related names together and says what they are for. A name is safe as "Safe output by default" defines it. No two names from one call share a slug. By default, safety wins over every other quality. The caller chooses between sorting and brevity. The default keeps the stamp, and a caller who needs a short handle drops it with a flag.
 
 
 ### Every run stands alone
